@@ -1,0 +1,14 @@
+[
+  {
+    "game_id": "NFL_101",
+    "home_team": "KC",
+    "away_team": "SF",
+    "kickoff_time": "2026-09-13T20:30:00Z"
+  },
+  {
+    "game_id": "NFL_102",
+    "home_team": "PHI",
+    "away_team": "DAL",
+    "kickoff_time": "2026-09-13T23:00:00Z"
+  }
+]

@@ -1,0 +1,79 @@
+variable "aws_region" {
+  description = "Region to deploy Kinesis/Lambda into"
+  type        = string
+  default     = "us-east-1"
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+resource "aws_kinesis_stream" "fantasy_sports_stream" {
+  name             = "fantasy-sports-realtime-ingest"
+  shard_count      = 10
+  retention_period = 24
+
+  shard_level_metrics = [
+    "IncomingBytes",
+    "OutgoingBytes",
+  ]
+
+  tags = {
+    Environment = "Production"
+    System      = "Blitz-Scale-Edge-Observer"
+  }
+}
+
+resource "aws_iam_role" "lambda_kinesis_role" {
+  name = "lambda_kinesis_delta_processor"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "kinesis_policy" {
+  role       = aws_iam_role.lambda_kinesis_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "vpc_access_policy" {
+  role       = aws_iam_role.lambda_kinesis_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# The Lambda function for delta processing
+resource "aws_lambda_function" "delta_processor" {
+  function_name = "fantasy-data-delta-processor"
+  role          = aws_iam_role.lambda_kinesis_role.arn
+  handler       = "delta_processor_lambda.lambda_handler"
+  runtime       = "python3.11"
+  timeout       = 15
+
+  # Dummy zip since the code is built via CI/CD
+  filename         = "dummy.zip"
+  source_code_hash = filebase64sha256("dummy.zip")
+
+  environment {
+    variables = {
+      REDIS_URL             = "redis://blitz-cache.redis.amazonaws.com:6379"
+      EDGE_WEBHOOK_URL      = "https://api.blitz-obs.com/webhook/update"
+      WEBHOOK_SECRET_TOKEN  = "secure-edge-token-12345"
+    }
+  }
+}
+
+resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
+  event_source_arn  = aws_kinesis_stream.fantasy_sports_stream.arn
+  function_name     = aws_lambda_function.delta_processor.arn
+  starting_position = "LATEST"
+  batch_size        = 100
+  maximum_retry_attempts = 2
+}

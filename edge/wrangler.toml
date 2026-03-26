@@ -1,0 +1,10 @@
+name = "blitz-edge-observer"
+main = "worker.js"
+compatibility_date = "2026-03-26"
+
+kv_namespaces = [
+  { binding = "GAME_STATE_KV", id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }
+]
+
+[vars]
+WEBHOOK_SECRET_TOKEN = "secure-edge-token-12345"
