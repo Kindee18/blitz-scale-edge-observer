@@ -30,7 +30,7 @@ jobs:
           tflint
           # TFSec for security hotspots
           curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
-          tfsec .
+          tfsec . --verbose
 
       - name: Node.js Lint
         run: |
