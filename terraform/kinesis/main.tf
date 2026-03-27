@@ -13,6 +13,9 @@ resource "aws_kinesis_stream" "fantasy_sports_stream" {
   shard_count      = 10
   retention_period = 24
 
+  encryption_type = "KMS"
+  kms_key_id      = "alias/aws/kinesis"
+
   shard_level_metrics = [
     "IncomingBytes",
     "OutgoingBytes",
@@ -25,7 +28,9 @@ resource "aws_kinesis_stream" "fantasy_sports_stream" {
 }
 
 resource "aws_sqs_queue" "delta_processor_dlq" {
-  name = "blitz-delta-processor-dlq"
+  name                              = "blitz-delta-processor-dlq"
+  kms_master_key_id                 = "alias/aws/sqs"
+  sqs_managed_encryption_enabled = true
 }
 
 resource "aws_iam_role" "lambda_kinesis_role" {
@@ -64,7 +69,7 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
           "dynamodb:UpdateItem"
         ]
         Effect   = "Allow"
-        Resource = ["arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/blitz-*"]
+        Resource = ["arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/blitz-game-state-*"]
       }
     ]
   })

@@ -8,6 +8,10 @@ resource "aws_dynamodb_table" "scaling_locks" {
     type = "S"
   }
 
+  server_side_encryption {
+    enabled = true
+  }
+
   tags = {
     Environment = "Production"
     System      = "Blitz-Scale-Edge-Observer"
@@ -28,6 +32,10 @@ resource "aws_dynamodb_table" "game_state_versions" {
   attribute {
     name = "Version"
     type = "N"
+  }
+
+  server_side_encryption {
+    enabled = true
   }
 
   tags = {
