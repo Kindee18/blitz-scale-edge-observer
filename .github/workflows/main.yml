@@ -2,9 +2,9 @@ name: Blitz-Edge-Production-Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
     inputs:
       auto_approve:
@@ -73,7 +73,7 @@ jobs:
   deploy:
     name: "Production Deploy"
     needs: terraform-plan
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment: production
     steps:
