@@ -44,6 +44,11 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   cluster_endpoint_public_access = true
+  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"] # Low-severity finding, but explicit is better or restriction needed
+  
+  cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+  create_cloudwatch_log_group = true
+  cluster_log_retention_in_days = 90
 
   # We use Karpenter primarily, but need a minimal managed node group for system pods
   eks_managed_node_groups = {
