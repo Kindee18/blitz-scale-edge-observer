@@ -6,6 +6,13 @@ variable "aws_region" {
 
 provider "aws" {
   region = var.aws_region
+  default_tags {
+    tags = {
+      Environment = "Production"
+      Project     = "Blitz-Scale-Edge-Observer"
+      ManagedBy   = "Terraform"
+    }
+  }
 }
 
 resource "aws_kinesis_stream" "fantasy_sports_stream" {

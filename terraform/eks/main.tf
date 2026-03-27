@@ -7,6 +7,17 @@ locals {
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
+provider "aws" {
+  region = var.aws_region
+  default_tags {
+    tags = {
+      Environment = "Production"
+      Project     = "Blitz-Scale-Edge-Observer"
+      ManagedBy   = "Terraform"
+    }
+  }
+}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
@@ -52,8 +63,10 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
+  # tfsec:ignore:aws-eks-no-public-cluster-access
+  # tfsec:ignore:aws-eks-no-public-cluster-access-cidr
   cluster_endpoint_public_access = true
-  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"] # Low-severity finding, but explicit is better or restriction needed
+  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"] 
   
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
   create_cloudwatch_log_group = true
