@@ -20,8 +20,10 @@ from streaming.delta_processor_lambda import compute_deltas_batched  # noqa: E40
 @pytest.mark.asyncio
 async def test_compute_deltas_batched_no_previous_state():
     """Test delta calculation when no state exists in Redis (Full sync expected)."""
-    mock_redis = AsyncMock()
-    mock_redis.pipeline.return_value.execute.side_effect = [
+    mock_redis = MagicMock()
+    mock_pipe = AsyncMock()
+    mock_redis.pipeline.return_value = mock_pipe
+    mock_pipe.execute.side_effect = [
         [None, None], # Initial MGET results
         ["OK", "OK"]  # MSET results
     ]
@@ -40,10 +42,12 @@ async def test_compute_deltas_batched_no_previous_state():
 @pytest.mark.asyncio
 async def test_compute_deltas_batched_with_partial_change():
     """Test delta calculation when stats have partially changed."""
-    mock_redis = AsyncMock()
+    mock_redis = MagicMock()
+    mock_pipe = AsyncMock()
+    mock_redis.pipeline.return_value = mock_pipe
     old_state = json.dumps({"stats": {"score": 10, "yards": 50}})
     
-    mock_redis.pipeline.return_value.execute.side_effect = [
+    mock_pipe.execute.side_effect = [
         [old_state], # Initial MGET
         ["OK"]       # MSET
     ]
@@ -61,10 +65,12 @@ async def test_compute_deltas_batched_with_partial_change():
 @pytest.mark.asyncio
 async def test_compute_deltas_batched_no_change():
     """Test delta calculation when no stats have changed."""
-    mock_redis = AsyncMock()
+    mock_redis = MagicMock()
+    mock_pipe = AsyncMock()
+    mock_redis.pipeline.return_value = mock_pipe
     old_state = json.dumps({"stats": {"score": 10}})
     
-    mock_redis.pipeline.return_value.execute.side_effect = [
+    mock_pipe.execute.side_effect = [
         [old_state], # Initial MGET
         []           # No MSET expected
     ]
