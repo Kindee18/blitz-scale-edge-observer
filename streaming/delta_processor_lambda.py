@@ -15,14 +15,21 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 
-# Initialize OTel Tracing
-trace.set_tracer_provider(TracerProvider())
-tracer = trace.get_tracer(__name__)
-trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
-BotocoreInstrumentor().instrument()
+_instrumented = False
 
-# Patch all supported libraries (boto3, requests, etc.)
-patch_all()
+def setup_instrumentation():
+    global _instrumented
+    if _instrumented:
+        return
+    # Initialize OTel Tracing
+    trace.set_tracer_provider(TracerProvider())
+    tracer = trace.get_tracer(__name__)
+    trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
+    BotocoreInstrumentor().instrument()
+    
+    # Patch all supported libraries
+    patch_all()
+    _instrumented = True
 
 cw = boto3.client('cloudwatch', region_name=os.getenv('AWS_REGION', 'us-east-1'))
 
@@ -166,6 +173,7 @@ async def compute_deltas_batched(records, redis):
 
 def lambda_handler(event, context):
     """Main entry point - wraps async loop."""
+    setup_instrumentation()
     return asyncio.run(async_main(event))
 
 async def async_main(event):
