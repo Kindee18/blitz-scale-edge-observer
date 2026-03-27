@@ -1,6 +1,7 @@
 resource "aws_secretsmanager_secret" "edge_token" {
   name        = "blitz-edge-webhook-token"
   description = "Shared secret for Lambda to Worker authentication"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "edge_token_v1" {
@@ -11,4 +12,5 @@ resource "aws_secretsmanager_secret_version" "edge_token_v1" {
 resource "aws_secretsmanager_secret" "redis_auth" {
   name        = "blitz-redis-auth"
   description = "Authentication for ElastiCache Redis"
+  recovery_window_in_days = 0 
 }
