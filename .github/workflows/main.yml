@@ -22,15 +22,11 @@ jobs:
           pip install ruff
           ruff check .
 
-      - name: Terraform Lint & Security
-        run: |
-          # Install TFLint & TFSec
-          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-          tflint --init
-          tflint
-          # TFSec for security hotspots
-          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
-          tfsec . --verbose
+      - name: Terraform Security Scan
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: .
+          additional_args: --verbose
 
       - name: Node.js Lint
         run: |
