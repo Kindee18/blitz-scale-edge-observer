@@ -26,6 +26,10 @@ resource "aws_lambda_function" "scheduled_scaler" {
   runtime       = "python3.11"
   timeout       = 30
   
+  tracing_config {
+    mode = "Active"
+  }
+  
   filename         = "dummy.zip"
   source_code_hash = filebase64sha256("dummy.zip")
 

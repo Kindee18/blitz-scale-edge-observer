@@ -104,6 +104,10 @@ resource "aws_lambda_function" "delta_processor" {
   runtime       = "python3.11"
   timeout       = 15
 
+  tracing_config {
+    mode = "Active"
+  }
+
   # Dummy zip since the code is built via CI/CD
   filename         = "dummy.zip"
   source_code_hash = filebase64sha256("dummy.zip")
