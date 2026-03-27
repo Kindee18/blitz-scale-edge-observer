@@ -1,3 +1,10 @@
+import sys
+from unittest.mock import MagicMock
+# Mock kubernetes before it is imported
+sys.modules['kubernetes'] = MagicMock()
+sys.modules['kubernetes.client'] = MagicMock()
+sys.modules['kubernetes.config'] = MagicMock()
+
 from datetime import datetime, timedelta, timezone
 from scaling.predictive_scaling import is_spike_imminent
 

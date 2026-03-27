@@ -1,6 +1,20 @@
 import pytest
 import json
-from unittest.mock import AsyncMock
+import sys
+from unittest.mock import AsyncMock, MagicMock
+
+# Mock problematic libraries before they are imported by the code under test
+mock_redis = MagicMock()
+mock_redis.RedisError = Exception
+sys.modules['aioredis'] = mock_redis
+sys.modules['aws_xray_sdk'] = MagicMock()
+sys.modules['aws_xray_sdk.core'] = MagicMock()
+sys.modules['opentelemetry'] = MagicMock()
+sys.modules['opentelemetry.trace'] = MagicMock()
+sys.modules['opentelemetry.sdk.trace'] = MagicMock()
+sys.modules['opentelemetry.sdk.trace.export'] = MagicMock()
+sys.modules['opentelemetry.instrumentation.botocore'] = MagicMock()
+
 from streaming.delta_processor_lambda import compute_deltas_batched
 
 @pytest.mark.asyncio
