@@ -14,4 +14,5 @@ resource "aws_secretsmanager_secret" "redis_auth" {
   name        = "blitz-redis-auth"
   description = "Authentication for ElastiCache Redis"
   recovery_window_in_days = 0 
+  kms_key_id = aws_kms_key.blitz_root_key.arn
 }
