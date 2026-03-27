@@ -155,7 +155,7 @@ async def compute_deltas_batched(records, redis):
                 "player_id": player_id,
                 "timestamp": record.get('timestamp'),
                 "delta": delta if delta else new_stats,
-                "is_full": not bool(delta)
+                "is_full": not current_state_raw
             }
             deltas.append(update)
             
