@@ -36,6 +36,7 @@ resource "aws_sqs_queue" "delta_processor_dlq" {
 resource "aws_iam_role" "lambda_kinesis_role" {
   name        = "lambda_kinesis_delta_processor"
   description = "Role for Lambda to process Kinesis streams and update Redis/DynamoDB"
+  force_detach_policies = true
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
