@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pip"
+    directory: "/streaming"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "npm"
+    directory: "/edge"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "terraform"
+    directory: "/terraform"
+    schedule:
+      interval: "weekly"

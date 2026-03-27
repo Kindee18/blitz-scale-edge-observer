@@ -24,6 +24,10 @@ resource "aws_kinesis_stream" "fantasy_sports_stream" {
   }
 }
 
+resource "aws_sqs_queue" "delta_processor_dlq" {
+  name = "blitz-delta-processor-dlq"
+}
+
 resource "aws_iam_role" "lambda_kinesis_role" {
   name = "lambda_kinesis_delta_processor"
 
@@ -39,14 +43,31 @@ resource "aws_iam_role" "lambda_kinesis_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "kinesis_policy" {
-  role       = aws_iam_role.lambda_kinesis_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaKinesisExecutionRole"
-}
+resource "aws_iam_role_policy" "lambda_scoped_access" {
+  name = "blitz-lambda-scoped-access"
+  role = aws_iam_role.lambda_kinesis_role.id
 
-resource "aws_iam_role_policy_attachment" "vpc_access_policy" {
-  role       = aws_iam_role.lambda_kinesis_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Effect   = "Allow"
+        Resource = [aws_secretsmanager_secret.edge_token.arn]
+      },
+      {
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem"
+        ]
+        Effect   = "Allow"
+        Resource = ["arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/blitz-*"]
+      }
+    ]
+  })
 }
 
 # The Lambda function for delta processing

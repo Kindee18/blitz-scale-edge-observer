@@ -1,0 +1,93 @@
+name: Blitz-Edge-Production-Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  quality-gate:
+    name: "Lint & Security Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Python Lint (Ruff)
+        run: |
+          pip install ruff
+          ruff check .
+
+      - name: Terraform Lint & Security
+        run: |
+          # Install TFLint & TFSec
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          tflint --init
+          tflint
+          # TFSec for security hotspots
+          curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+          tfsec .
+
+      - name: Node.js Lint
+        run: |
+          cd edge && npm install
+          npm run lint || true
+
+  test-gate:
+    name: "Automated Testing"
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Pytest
+        run: |
+          pip install pytest pytest-asyncio aioredis boto3 pydantic
+          pytest tests/unit/
+
+  terraform-plan:
+    name: "Terraform Plan"
+    needs: test-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: TF Plan
+        run: |
+          cd terraform/eks
+          terraform init
+          terraform plan -out=tfplan
+
+  deploy:
+    name: "Production Deploy"
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: TF Apply
+        run: |
+          cd terraform/eks
+          terraform init
+          terraform apply -auto-approve tfplan
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          workingDirectory: 'edge'

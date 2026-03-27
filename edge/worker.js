@@ -1,77 +1,95 @@
+// 1. Durable Object for Real-Time Game State Management
+export class GameTrackerDO {
+  constructor(state, env) {
+    this.state = state;
+    this.sessions = new Set();
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    // WebSocket Connection from Client
+    if (url.pathname === "/connect") {
+      const [client, server] = Object.values(new WebSocketPair());
+      server.accept();
+      
+      this.sessions.add(server);
+      server.addEventListener("close", () => this.sessions.delete(server));
+
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
+    // Broadcast update from Webhook
+    if (url.pathname === "/broadcast") {
+      const update = await request.json();
+      const payload = JSON.stringify(update);
+      
+      this.sessions.forEach(s => {
+        try {
+          s.send(payload);
+        } catch (e) {
+          this.sessions.delete(s);
+        }
+      });
+      
+      return new Response("OK");
+    }
+
+    return new Response("Not Found", { status: 404 });
+  }
+}
+
+// 2. Main Worker Entry Point
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // 1. WebSocket Endpoint for Clients
+    // Client WebSocket Handshake
     if (url.pathname === "/realtime") {
-      if (request.headers.get("Upgrade") !== "websocket") {
-        return new Response("Expected Upgrade: websocket", { status: 426 });
-      }
+      const gameId = url.searchParams.get("game_id");
+      if (!gameId) return new Response("Missing game_id", { status: 400 });
 
-      const [client, server] = Object.values(new WebSocketPair());
-      const clientId = url.searchParams.get("client_id") || crypto.randomUUID();
-
-      server.accept();
-      server.addEventListener("message", async (msg) => {
-        try {
-          const data = JSON.parse(msg.data);
-          if (data.action === "subscribe") {
-            // In a real implementation using Durable Objects, we'd route this
-            // connection to the Game's Durable Object to manage broadcasting.
-            // For KV-based simple caching, we can just send the latest state immediately:
-            for (const game of data.games) {
-              const cachedState = await env.GAME_STATE_KV.get(`state:${game}`);
-              if (cachedState) {
-                server.send(cachedState);
-              }
-            }
-          }
-        } catch (e) {
-          console.error("WebSocket message error", e);
-        }
-      });
-
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-      });
+      const id = env.GAME_TRACKER_DO.idFromName(gameId);
+      const obj = env.GAME_TRACKER_DO.get(id);
+      
+      // Forward request to Durable Object
+      return obj.fetch(new Request(request.url.replace("/realtime", "/connect"), request));
     }
 
-    // 2. Webhook Endpoint for Kinesis Lambda Delta Processor
+    // Webhook Ingest from AWS Lambda
     if (url.pathname === "/webhook/update" && request.method === "POST") {
       const authHeader = request.headers.get("Authorization");
       if (authHeader !== `Bearer ${env.WEBHOOK_SECRET_TOKEN}`) {
         return new Response("Unauthorized", { status: 401 });
       }
 
-      try {
-        const payload = await request.json();
-        const events = payload.events || [];
+      const payload = await request.json();
+      const events = payload.events || [];
 
-        // Broadcast to WebSockets & Update KV Cache
-        for (const event of events) {
-          const { game_id, player_id, delta } = event;
-          
-          // Using KV for fast read/edges
-          // We put the latest update in KV so late-joiners get the freshest data
-          await env.GAME_STATE_KV.put(`state:${game_id}`, JSON.stringify(event), {
-            expirationTtl: 3600 // Expire after an hour
-          });
-
-          // In a Durable Objects architecture, we would broadcast the delta to
-          // all connected websockets subscribed to this game_id here.
-          // e.g. env.GAME_TRACKER_DO.get(id).fetch("http://.../broadcast", { body: event })
+      for (const event of events) {
+        // Enforce Minimal Schema Validation
+        if (!event.game_id || !event.player_id || !event.delta) {
+          console.error("Invalid event format received", event);
+          continue;
         }
 
-        return new Response(JSON.stringify({ success: true, processed: events.length }), {
-          headers: { "Content-Type": "application/json" }
-        });
+        const gameId = event.game_id;
+        
+        // 1. Update Persistent Edge Cache (KV)
+        await env.GAME_STATE_KV.put(`state:${gameId}`, JSON.stringify(event), { expirationTtl: 3600 });
 
-      } catch (err) {
-        return new Response("Bad Request", { status: 400 });
+        // 2. Trigger Real-Time Broadcast via Durable Object
+        const id = env.GAME_TRACKER_DO.idFromName(gameId);
+        const obj = env.GAME_TRACKER_DO.get(id);
+        await obj.fetch(new Request("http://do/broadcast", {
+          method: "POST",
+          body: JSON.stringify(event)
+        }));
       }
+
+      return new Response(JSON.stringify({ success: true, count: events.length }));
     }
 
-    return new Response("Not Found", { status: 404 });
+    return new Response("Blitz-Scale Edge Hub Active", { status: 200 });
   }
 };

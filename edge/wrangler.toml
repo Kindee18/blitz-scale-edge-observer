@@ -6,5 +6,14 @@ kv_namespaces = [
   { binding = "GAME_STATE_KV", id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }
 ]
 
+[durable_objects]
+bindings = [
+  { name = "GAME_TRACKER_DO", class_name = "GameTrackerDO" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["GameTrackerDO"]
+
 [vars]
 WEBHOOK_SECRET_TOKEN = "secure-edge-token-12345"

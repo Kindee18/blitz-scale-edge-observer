@@ -47,5 +47,32 @@ resource "helm_release" "karpenter" {
   }
 }
 
-# The actual NodePool configuration will typically be handled via Kubernetes Manifests.
-# We will create a default EC2NodeClass and NodePool CRD to auto-scale on spot.
+# NodePool CRD (Conceptual representation in Terraform for readability)
+# In reality, this would be applied via kubectl or a kubernetes_manifest resource
+resource "kubernetes_manifest" "karpenter_nodepool" {
+  manifest = {
+    apiVersion = "karpenter.sh/v1beta1"
+    kind       = "NodePool"
+    metadata = {
+      name = "default"
+    }
+    spec = {
+      template = {
+        spec = {
+          requirements = [
+            { key = "karpenter.sh/capacity-type", operator = "In", values = ["spot", "on-demand"] },
+            { key = "kubernetes.io/arch", operator = "In", values = ["amd64"] },
+            { key = "karpenter.k8s.aws/instance-category", operator = "In", values = ["c", "m", "r"] },
+          ]
+          nodeClassRef = {
+            name = "default"
+          }
+        }
+      }
+      disruption = {
+        consolidationPolicy = "WhenUnderutilized"
+        expireAfter = "720h"
+      }
+    }
+  }
+}
