@@ -4,6 +4,17 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+resource "aws_kms_key" "blitz_key" {
+  description             = "KMS key for Blitz-Scale Edge Observer infrastructure"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "blitz_key_alias" {
+  name          = "alias/blitz-scale-key"
+  target_key_id = aws_kms_key.blitz_key.key_id
+}
+
 provider "aws" {
   region = var.aws_region
   default_tags {
@@ -21,7 +32,7 @@ resource "aws_kinesis_stream" "fantasy_sports_stream" {
   retention_period = 24
 
   encryption_type = "KMS"
-  kms_key_id      = "alias/aws/kinesis"
+  kms_key_id      = aws_kms_key.blitz_key.arn
 
   shard_level_metrics = [
     "IncomingBytes",
@@ -36,7 +47,7 @@ resource "aws_kinesis_stream" "fantasy_sports_stream" {
 
 resource "aws_sqs_queue" "delta_processor_dlq" {
   name                              = "blitz-delta-processor-dlq"
-  kms_master_key_id                 = "alias/aws/sqs"
+  kms_master_key_id                 = aws_kms_key.blitz_key.arn
   sqs_managed_encryption_enabled = true
 }
 
