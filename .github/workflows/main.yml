@@ -41,7 +41,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run Pytest
         run: |
-          pip install pytest pytest-asyncio aioredis boto3 pydantic
+          pip install pytest pytest-asyncio aioredis boto3 pydantic kubernetes aws-xray-sdk \
+                      opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-botocore aiohttp
           PYTHONPATH=. pytest tests/unit/
 
   terraform-plan:
