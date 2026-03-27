@@ -2,6 +2,7 @@ resource "aws_secretsmanager_secret" "edge_token" {
   name        = "blitz-edge-webhook-token"
   description = "Shared secret for Lambda to Worker authentication"
   recovery_window_in_days = 0
+  kms_key_id = aws_kms_key.blitz_root_key.arn
 }
 
 resource "aws_secretsmanager_secret_version" "edge_token_v1" {
