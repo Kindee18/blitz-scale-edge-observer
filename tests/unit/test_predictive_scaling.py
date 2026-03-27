@@ -5,8 +5,8 @@ sys.modules['kubernetes'] = MagicMock()
 sys.modules['kubernetes.client'] = MagicMock()
 sys.modules['kubernetes.config'] = MagicMock()
 
-from datetime import datetime, timedelta, timezone
-from scaling.predictive_scaling import is_spike_imminent
+from datetime import datetime, timedelta, timezone  # noqa: E402
+from scaling.predictive_scaling import is_spike_imminent  # noqa: E402
 
 def test_is_spike_imminent_true():
     now = datetime.now(timezone.utc)

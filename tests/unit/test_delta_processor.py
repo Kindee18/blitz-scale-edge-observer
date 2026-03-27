@@ -15,7 +15,7 @@ sys.modules['opentelemetry.sdk.trace'] = MagicMock()
 sys.modules['opentelemetry.sdk.trace.export'] = MagicMock()
 sys.modules['opentelemetry.instrumentation.botocore'] = MagicMock()
 
-from streaming.delta_processor_lambda import compute_deltas_batched
+from streaming.delta_processor_lambda import compute_deltas_batched  # noqa: E402
 
 @pytest.mark.asyncio
 async def test_compute_deltas_batched_no_previous_state():
