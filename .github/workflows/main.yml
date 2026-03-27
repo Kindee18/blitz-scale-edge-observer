@@ -5,6 +5,13 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      auto_approve:
+        description: 'Auto-approve Terraform apply?'
+        required: false
+        default: 'true'
+        type: boolean
 
 permissions:
   id-token: write
