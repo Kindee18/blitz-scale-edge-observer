@@ -1,3 +1,14 @@
+resource "aws_kms_key" "dynamodb_key" {
+  description             = "KMS key for DynamoDB encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "dynamodb_key_alias" {
+  name          = "alias/blitz-dynamodb-key"
+  target_key_id = aws_kms_key.dynamodb_key.key_id
+}
+
 resource "aws_dynamodb_table" "scaling_locks" {
   name           = "blitz-edge-scaling-locks"
   billing_mode   = "PAY_PER_REQUEST"
