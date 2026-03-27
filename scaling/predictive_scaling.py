@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import boto3
-import base64
 from datetime import datetime, timedelta, timezone
 from kubernetes import client, config
 
@@ -29,7 +28,7 @@ def get_kube_config():
     # Get token via STS/EKS token generator
     # requires 'aws' CLI or botocore internal
     sts = boto3.client('sts')
-    token = sts.get_caller_identity() # Dummy, in reality use EKS token generator API
+    sts.get_caller_identity() # Dummy, in reality use EKS token generator API
     
     # Simplified for the walkthrough/prototype implementation:
     config.load_kube_config() # Assuming local kubeconfig or cluster role

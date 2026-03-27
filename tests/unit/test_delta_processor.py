@@ -1,7 +1,6 @@
 import pytest
 import json
-import base64
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from streaming.delta_processor_lambda import compute_deltas_batched
 
 @pytest.mark.asyncio

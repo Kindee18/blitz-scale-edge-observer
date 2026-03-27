@@ -33,7 +33,7 @@ sys.modules['opentelemetry.instrumentation.botocore'] = MagicMock()
 sys.modules['aws_xray_sdk.core'] = MagicMock()
 sys.modules['aws_xray_sdk.core.patch_all'] = MagicMock()
 
-from streaming.delta_processor_lambda import async_main
+from streaming.delta_processor_lambda import async_main  # noqa: E402
 
 async def run_simulation():
     print("🚀 Starting Blitz-Scale Edge Observer Simulation (Final Batch Fix)...")

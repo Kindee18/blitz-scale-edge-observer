@@ -6,8 +6,8 @@ import asyncio
 import aioredis
 import boto3
 from botocore.config import Config
-from pydantic import BaseModel, Field, validator
-from typing import Dict, List, Optional
+from pydantic import BaseModel, validator
+from typing import Dict, Optional
 from aws_xray_sdk.core import xray_recorder
 from aws_xray_sdk.core import patch_all
 from opentelemetry import trace
@@ -53,7 +53,8 @@ class IngestEvent(BaseModel):
 
     @validator('timestamp')
     def validate_timestamp(cls, v):
-        if v < 0: raise ValueError("Invalid timestamp")
+        if v < 0: 
+            raise ValueError("Invalid timestamp")
         return v
 
 # --- Optimized AWS Config ---

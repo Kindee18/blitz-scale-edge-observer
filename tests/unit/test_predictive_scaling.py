@@ -1,5 +1,3 @@
-import pytest
-import json
 from datetime import datetime, timedelta, timezone
 from scaling.predictive_scaling import is_spike_imminent
 

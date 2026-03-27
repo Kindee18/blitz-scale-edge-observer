@@ -1,4 +1,3 @@
-import json
 
 def audit_logging_savings(raw_log_bytes, filtered_log_bytes):
     savings = (1 - (filtered_log_bytes / raw_log_bytes)) * 100

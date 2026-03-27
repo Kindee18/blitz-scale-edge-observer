@@ -5,7 +5,7 @@ def validate_latency(endpoint, trials=10):
     latencies = []
     for _ in range(trials):
         start = time.perf_counter()
-        res = requests.get(endpoint)
+        requests.get(endpoint)
         end = time.perf_counter()
         latencies.append((end - start) * 1000)
     

@@ -65,7 +65,7 @@ def lambda_handler(event, context):
         timestamp = datetime.utcnow().strftime('%Y/%m/%d/%H-%M-%S')
         object_key = f"filtered-logs/{log_group.replace('/', '-')}/{timestamp}-{context.aws_request_id}.json"
         
-        payload = '\n'.join([json.dumps(l) for l in filtered_logs])
+        payload = '\n'.join([json.dumps(log) for log in filtered_logs])
         
         try:
             s3_client.put_object(

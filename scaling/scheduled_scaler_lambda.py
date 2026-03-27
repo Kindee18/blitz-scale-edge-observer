@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import boto3
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 # We import the core logic
 # In a real packaging, these would be in the same layer or package

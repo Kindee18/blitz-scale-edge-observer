@@ -1,5 +1,4 @@
 import asyncio
-import json
 import random
 import logging
 from streaming.client_sim import client_session
