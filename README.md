@@ -81,6 +81,10 @@ blitz-scale-edge-observer/
 └── README.md
 ```
 
+## 📌 Releases
+Latest Stable Version: **v1.0.0**
+For detailed changes, see the [Release Notes](docs/RELEASE_NOTES.md).
+
 ## 💻 Operations Walkthrough
 
 1. **Deploy Backend**: `cd terraform/eks && terraform apply -auto-approve` (Provision EKS + Karpenter)
