@@ -20,7 +20,8 @@ resource "aws_dynamodb_table" "scaling_locks" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
+    kms_key_arn = aws_kms_key.dynamodb_key.arn
   }
 
   tags = {
@@ -46,7 +47,8 @@ resource "aws_dynamodb_table" "game_state_versions" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
+    kms_key_arn = aws_kms_key.dynamodb_key.arn
   }
 
   tags = {
