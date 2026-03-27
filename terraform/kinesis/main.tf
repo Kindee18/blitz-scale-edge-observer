@@ -51,8 +51,9 @@ resource "aws_iam_role" "lambda_kinesis_role" {
 }
 
 resource "aws_iam_role_policy" "lambda_scoped_access" {
-  name = "blitz-lambda-scoped-access"
-  role = aws_iam_role.lambda_kinesis_role.id
+  name        = "blitz-lambda-scoped-access"
+  description = "Scoped access for Lambda to Secrets Manager and DynamoDB"
+  role        = aws_iam_role.lambda_kinesis_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"

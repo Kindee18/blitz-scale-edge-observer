@@ -36,6 +36,10 @@ module "vpc" {
     "kubernetes.io/role/internal-elb" = 1
     "karpenter.sh/discovery" = local.name
   }
+
+  manage_default_security_group = true
+  default_security_group_ingress = []
+  default_security_group_egress  = []
 }
 
 module "eks" {
