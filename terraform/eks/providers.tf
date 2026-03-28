@@ -18,6 +18,13 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+  default_tags {
+    tags = {
+      Environment = "Production"
+      Project     = "Blitz-Scale-Edge-Observer"
+      ManagedBy   = "Terraform"
+    }
+  }
 }
 
 # The Kubernetes and Helm providers rely on EKS cluster auth

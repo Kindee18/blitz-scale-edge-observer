@@ -1,19 +1,24 @@
-import os
-import json
-import base64
-import logging
 import asyncio
+import base64
+import json
+import logging
+import os
+import sys
+from typing import Dict, Optional
+
 import aioredis
 import boto3
+from aws_xray_sdk.core import patch_all, xray_recorder
 from botocore.config import Config
-from pydantic import BaseModel, validator
-from typing import Dict, Optional
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.core import patch_all
 from opentelemetry import trace
+from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
+from pydantic import BaseModel, validator
+
+# Add streaming directory to path for imports
+sys.path.insert(0, os.path.dirname(__file__))
+from fantasy_scoring import calculate_fantasy_delta, generate_start_sit_signal
 
 _instrumented = False
 
@@ -25,7 +30,7 @@ def setup_instrumentation():
     trace.set_tracer_provider(TracerProvider())
     trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
     BotocoreInstrumentor().instrument()
-    
+
     # Patch all supported libraries
     patch_all()
     _instrumented = True
@@ -50,17 +55,48 @@ class GameStats(BaseModel):
     score: Optional[int] = 0
     yards: Optional[int] = 0
     tds: Optional[int] = 0
+    # Fantasy-specific stats
+    passing_yards: Optional[float] = 0
+    passing_tds: Optional[int] = 0
+    passing_ints: Optional[int] = 0
+    rushing_yards: Optional[float] = 0
+    rushing_tds: Optional[int] = 0
+    receptions: Optional[int] = 0
+    receiving_yards: Optional[float] = 0
+    receiving_tds: Optional[int] = 0
+    fumbles: Optional[int] = 0
+
+class FantasyDelta(BaseModel):
+    previous_points: float
+    current_points: float
+    points_delta: float
+    breakdown_delta: Dict[str, float]
+    significant_change: bool
+    start_sit_signal: Optional[str] = None
 
 class IngestEvent(BaseModel):
     game_id: str
     player_id: str
+    player_name: Optional[str] = None
     timestamp: int
     stats: Dict[str, int]
+    # Multi-tenant support
+    league_id: Optional[str] = None
+    user_id: Optional[str] = None
+    # Fantasy context
+    projected_points: Optional[float] = None
+    scoring_format: Optional[str] = "ppr"  # ppr, half_ppr, standard
 
     @validator('timestamp')
     def validate_timestamp(cls, v):
-        if v < 0: 
+        if v < 0:
             raise ValueError("Invalid timestamp")
+        return v
+
+    @validator('scoring_format')
+    def validate_scoring_format(cls, v):
+        if v not in ['ppr', 'half_ppr', 'standard']:
+            return 'ppr'  # Default to PPR if invalid
         return v
 
 # --- Optimized AWS Config ---
@@ -92,13 +128,14 @@ async def push_to_edge(deltas):
     """Pushes computed delta updates to the Edge network with exponential backoff."""
     if not deltas:
         return
-        
-    import aiohttp
+
     import random
-    
+
+    import aiohttp
+
     max_retries = 3
     base_delay = 0.1 # 100ms
-    
+
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {WEBHOOK_SECRET_TOKEN}'
@@ -125,49 +162,81 @@ async def push_to_edge(deltas):
 async def compute_deltas_batched(records, redis):
     """
     Computes deltas for a batch of records using Redis pipelining.
+    Includes fantasy points calculation for FantasyPros integration.
     Ensures state consistency via DynamoDB versioning.
     """
     deltas = []
     pipe = redis.pipeline()
-    
+
     # 1. Batch GET current states
     keys = [f"state:{r['game_id']}:{r['player_id']}" for r in records]
     for key in keys:
         pipe.get(key)
-    
+
     current_states_raw = await pipe.execute()
-    
+
     # 2. Compare and build batch update
     pipe = redis.pipeline()
     for i, record in enumerate(records):
         game_id = record['game_id']
         player_id = record['player_id']
+        player_name = record.get('player_name', '')
         new_stats = record.get('stats', {})
-        
+        league_id = record.get('league_id')
+        user_id = record.get('user_id')
+        projected_points = record.get('projected_points')
+        scoring_format = record.get('scoring_format', 'ppr')
+
         current_state_raw = current_states_raw[i]
         old_stats = json.loads(current_state_raw).get('stats', {}) if current_state_raw else {}
-        
-        delta = {k: v for k, v in new_stats.items() if old_stats.get(k) != v}
-        
-        if delta or not current_state_raw:
+
+        # Calculate stat deltas
+        stat_delta = {k: v for k, v in new_stats.items() if old_stats.get(k) != v}
+
+        # Calculate fantasy points delta
+        fantasy_delta = None
+        if any(k in new_stats for k in ['passing_yards', 'rushing_yards', 'receptions', 'receiving_yards']):
+            try:
+                fantasy_delta = calculate_fantasy_delta(old_stats, new_stats, scoring_format)
+
+                # Generate start/sit signal if there's a significant change
+                if fantasy_delta['significant_change'] and projected_points:
+                    signal = generate_start_sit_signal(fantasy_delta, projected_points)
+                    fantasy_delta['start_sit_signal'] = signal
+
+            except Exception as e:
+                logger.warning(f"Fantasy calculation failed for {player_id}: {e}")
+
+        if stat_delta or fantasy_delta or not current_state_raw:
             update = {
                 "game_id": game_id,
                 "player_id": player_id,
+                "player_name": player_name,
                 "timestamp": record.get('timestamp'),
-                "delta": delta if delta else new_stats,
-                "is_full": not current_state_raw
+                "stat_delta": stat_delta if stat_delta else new_stats,
+                "fantasy_delta": fantasy_delta,
+                "is_full": not current_state_raw,
+                "league_id": league_id,
+                "user_id": user_id,
+                "scoring_format": scoring_format
             }
             deltas.append(update)
-            
-            # Update Redis Cache
-            pipe.set(f"state:{game_id}:{player_id}", json.dumps(record), ex=3600)
-            
-            # Async persistent versioning in DynamoDB (Optional/Background)
-            # In a real high-throughput app, we might buffer these in SQS
-    
+
+            # Update Redis Cache with full record including fantasy calculation
+            record_to_store = {
+                **record,
+                'fantasy_points': fantasy_delta['current_points'] if fantasy_delta else 0,
+                'cached_at': record.get('timestamp')
+            }
+            pipe.set(f"state:{game_id}:{player_id}", json.dumps(record_to_store), ex=3600)
+
+            # Emit fantasy points metric if significant change
+            if fantasy_delta and fantasy_delta['significant_change']:
+                publish_metric(f'FantasyPointsDelta_{scoring_format}', abs(fantasy_delta['points_delta']), 'Count')
+
     if deltas:
         await pipe.execute()
-        
+
     return deltas
 
 def lambda_handler(event, context):
@@ -192,7 +261,7 @@ async def async_main(event):
         with xray_recorder.in_segment('ComputeDeltas'):
             deltas = await compute_deltas_batched(records_to_process, redis)
             publish_metric('DeltasProduced', len(deltas), 'Count')
-            
+
         with xray_recorder.in_segment('PushToEdge'):
             await push_to_edge(deltas)
     finally:

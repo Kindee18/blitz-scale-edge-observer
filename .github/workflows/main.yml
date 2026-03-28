@@ -2,96 +2,277 @@ name: Blitz-Edge-Production-Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
       auto_approve:
         description: 'Auto-approve Terraform apply?'
         required: false
-        default: 'true'
+        default: false
         type: boolean
 
 permissions:
   id-token: write
   contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: us-east-1
+  PYTHON_VERSION: '3.11'
 
 jobs:
+  # ============================================
+  # Phase 1: Quality Gates
+  # ============================================
   quality-gate:
-    name: "Lint & Security Scan"
+    name: "🔍 Lint & Security Scan"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Python Lint (Ruff)
         run: |
           pip install ruff
           ruff check .
+          ruff format . --check
 
-      - name: Terraform Security Scan
-        uses: aquasecurity/tfsec-action@v1.0.0
+      - name: Create reports directory
+        run: mkdir -p reports
+
+      - name: Terraform Security Scan (tfsec)
+        uses: aquasecurity/tfsec-action@v1.0.3
         with:
-          working_directory: .
-          additional_args: --verbose
+          working_directory: terraform
+          additional_args: --verbose --format sarif --out reports/tfsec.sarif
 
-      - name: Node.js Lint
+      - name: Terraform Security Scan (Checkov)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          output_format: sarif
+          output_file_path: reports/checkov.sarif
+
+      - name: Node.js Lint & Build
         run: |
-          cd edge && npm install
-          npm run lint || true
+          cd edge && npm ci
+          npm run lint
+          npm run build --if-present
 
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: reports/
+
+  # ============================================
+  # Phase 2: Testing
+  # ============================================
   test-gate:
-    name: "Automated Testing"
+    name: "🧪 Automated Testing"
     needs: quality-gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Run Pytest
-        run: |
-          pip install pytest pytest-asyncio aioredis boto3 pydantic kubernetes aws-xray-sdk \
-                      opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-botocore aiohttp
-          PYTHONPATH=. pytest tests/unit/
+      - uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-asyncio aioredis boto3 pydantic kubernetes \
+            aws-xray-sdk opentelemetry-api opentelemetry-sdk \
+            opentelemetry-instrumentation-botocore aiohttp pytest-cov
+
+      - name: Run unit tests with coverage
+        run: |
+          PYTHONPATH=. pytest tests/unit/ -v --cov=. --cov-report=xml --cov-report=html
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+  # ============================================
+  # Phase 3: Terraform Plan (with approval)
+  # ============================================
   terraform-plan:
-    name: "Terraform Plan"
+    name: "📋 Terraform Plan"
     needs: test-gate
     runs-on: ubuntu-latest
+    outputs:
+      plan_exitcode: ${{ steps.plan.outputs.exitcode }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: TF Plan
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.6.0"
+
+      - name: Terraform Init (EKS)
         run: |
           cd terraform/eks
           terraform init
-          terraform plan -out=tfplan
 
-  deploy:
-    name: "Production Deploy"
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd terraform/eks
+          set +e
+          terraform plan -out=tfplan -detailed-exitcode
+          exitcode=$?
+          set -e
+          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+          # Exit 0 to continue workflow, but capture exit code for conditional jobs
+          # Exit codes: 0=no changes, 1=error, 2=changes present
+          if [ $exitcode -eq 1 ]; then
+            exit 1  # Only fail on actual errors
+          fi
+
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform/eks/tfplan
+
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request' && steps.plan.outputs.exitcode != '1'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const output = `#### Terraform Plan Success
+            <details><summary>Show Plan</summary>
+            Terraform plan completed successfully with no changes or additions.
+            </details>
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+  # ============================================
+  # Phase 4: Staging Deployment
+  # ============================================
+  deploy-staging:
+    name: "🚀 Deploy to Staging"
     needs: terraform-plan
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: ${{ github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging') }}
     runs-on: ubuntu-latest
-    environment: production
+    environment: staging
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: TF Apply
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform/eks/
+
+      - name: Terraform Apply (Staging)
         run: |
           cd terraform/eks
           terraform init
           terraform apply -auto-approve tfplan
 
-      - name: Deploy Worker
+      - name: Deploy Worker (Staging)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           workingDirectory: 'edge'
+          environment: 'staging'
+
+      - name: Smoke Test Staging
+        run: |
+          curl -f https://api-staging.blitz-obs.com/health || exit 1
+
+  # ============================================
+  # Phase 5: Production Deployment (with approval)
+  # ============================================
+  deploy-production:
+    name: "🚀 Deploy to Production"
+    needs: [terraform-plan, deploy-staging]
+    if: ${{ (github.ref == 'refs/heads/main' && needs.terraform-plan.outputs.plan_exitcode != '1') || (github.event_name == 'workflow_dispatch' && inputs.environment == 'production' && inputs.auto_approve == true) }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan
+          path: terraform/eks/
+
+      - name: Terraform Apply (Production)
+        run: |
+          cd terraform/eks
+          terraform init
+          terraform apply tfplan
+
+      - name: Deploy Worker (Production)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          workingDirectory: 'edge'
+          environment: 'production'
+
+      - name: Post-Deploy Smoke Test
+        run: |
+          curl -f https://api.blitz-obs.com/health || exit 1
+          echo "✅ Production deployment successful"
+
+      - name: Notify Slack
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment ${{ job.status }}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

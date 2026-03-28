@@ -1,0 +1,159 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 0,
+            "width": 24,
+            "height": 3,
+            "properties": {
+                "metrics": [
+                    ["BlitzScale/Edge", "DeltasProduced", "Stat", "Sum", { "color": "#2ca02c" }],
+                    ["BlitzScale/Edge", "EdgePushSuccess", "Stat", "Sum", { "color": "#1f77b4" }]
+                ],
+                "period": 60,
+                "stat": "Sum",
+                "region": "us-east-1",
+                "title": "Delta Processing Throughput (per minute)",
+                "liveData": true,
+                "annotations": {
+                    "horizontal": [
+                        {
+                            "value": 10000,
+                            "label": "Target: 10K/min",
+                            "color": "#ff7f0e"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 3,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    ["BlitzScale/Edge", "EdgePushLatency", "Stat", "p99", { "label": "P99 Latency" }],
+                    ["BlitzScale/Edge", "EdgePushLatency", "Stat", "p50", { "label": "P50 Latency" }],
+                    ["BlitzScale/Edge", "EdgePushLatency", "Stat", "Average", { "label": "Avg Latency" }]
+                ],
+                "period": 60,
+                "stat": "Average",
+                "region": "us-east-1",
+                "title": "Edge Push Latency (ms)",
+                "liveData": true,
+                "annotations": {
+                    "horizontal": [
+                        {
+                            "value": 100,
+                            "label": "SLA: 100ms",
+                            "color": "#d62728",
+                            "fill": "above"
+                        }
+                    ]
+                },
+                "yAxis": {
+                    "left": {
+                        "min": 0,
+                        "max": 500
+                    }
+                }
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 3,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    ["BlitzScale/Edge", "FantasyPointsDelta_ppr", "Stat", "Sum", { "color": "#2ca02c", "label": "PPR" }],
+                    ["BlitzScale/Edge", "FantasyPointsDelta_half_ppr", "Stat", "Sum", { "color": "#ff7f0e", "label": "Half-PPR" }],
+                    ["BlitzScale/Edge", "FantasyPointsDelta_standard", "Stat", "Sum", { "color": "#9467bd", "label": "Standard" }]
+                ],
+                "period": 60,
+                "stat": "Sum",
+                "region": "us-east-1",
+                "title": "Fantasy Points Updates by Scoring Format",
+                "liveData": true
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 9,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    ["BlitzScale/PredictiveScaling", "ScalingScaleUp", "Stat", "Sum", { "color": "#2ca02c" }],
+                    ["BlitzScale/PredictiveScaling", "ScalingScaleDown", "Stat", "Sum", { "color": "#d62728" }],
+                    ["BlitzScale/PredictiveScaling", "ScalingErrors", "Stat", "Sum", { "color": "#ff0000" }]
+                ],
+                "period": 300,
+                "stat": "Sum",
+                "region": "us-east-1",
+                "title": "Predictive Scaling Operations",
+                "liveData": true
+            }
+        },
+        {
+            "type": "metric",
+            "x": 8,
+            "y": 9,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    ["BlitzScale/PredictiveScaling", "ScalingExecutionDuration", "Stat", "p99", { "label": "P99" }],
+                    ["BlitzScale/PredictiveScaling", "ScalingExecutionDuration", "Stat", "p50", { "label": "P50" }],
+                    ["BlitzScale/PredictiveScaling", "ScalingExecutionDuration", "Stat", "Average", { "label": "Avg" }]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "us-east-1",
+                "title": "Scaling Execution Duration (seconds)",
+                "liveData": true
+            }
+        },
+        {
+            "type": "metric",
+            "x": 16,
+            "y": 9,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    ["BlitzScale/Edge", "EdgePushSuccessRate", "Stat", "Average", { "label": "Success Rate %" }]
+                ],
+                "period": 300,
+                "stat": "Average",
+                "region": "us-east-1",
+                "title": "Edge Push Success Rate",
+                "liveData": true,
+                "yAxis": {
+                    "left": {
+                        "min": 95,
+                        "max": 100
+                    }
+                }
+            }
+        },
+        {
+            "type": "log",
+            "x": 0,
+            "y": 15,
+            "width": 24,
+            "height": 6,
+            "properties": {
+                "title": "Recent Errors",
+                "region": "us-east-1",
+                "query": "SOURCE '/aws/lambda/blitz-edge-scheduled-scaler' | SOURCE '/aws/lambda/blitz-delta-processor' | fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc | limit 20",
+                "liveData": true
+            }
+        }
+    ]
+}

@@ -7,17 +7,6 @@ locals {
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
-provider "aws" {
-  region = var.aws_region
-  default_tags {
-    tags = {
-      Environment = "Production"
-      Project     = "Blitz-Scale-Edge-Observer"
-      ManagedBy   = "Terraform"
-    }
-  }
-}
-
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
@@ -70,7 +59,6 @@ module "eks" {
   
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
   create_cloudwatch_log_group = true
-  cluster_log_retention_in_days = 90
 
   # We use Karpenter primarily, but need a minimal managed node group for system pods
   eks_managed_node_groups = {

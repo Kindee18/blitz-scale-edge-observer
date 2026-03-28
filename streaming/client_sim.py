@@ -19,19 +19,19 @@ async def client_session(client_id):
     try:
         async with websockets.connect(f"{EDGE_WS_URL}?client_id={client_id}") as websocket:
             logger.info(f"Client {client_id} connected")
-            
+
             # Subscribe to specific games
             subscribe_msg = {
                 "action": "subscribe",
                 "games": ["NFL_101", "NFL_102"]
             }
             await websocket.send(json.dumps(subscribe_msg))
-            
+
             while True:
                 # Wait for push messages (deltas)
                 message = await websocket.recv()
                 data = json.loads(message)
-                
+
                 # Measure latency (assuming the server includes a timestamp)
                 server_ts = data.get("timestamp")
                 if server_ts:
@@ -39,7 +39,7 @@ async def client_session(client_id):
                     logger.info(f"Client {client_id} | Update received | Latency: {latency:.1f}ms | Payload: {data['delta']}")
                 else:
                     logger.info(f"Client {client_id} | Message received: {data}")
-                    
+
     except Exception as e:
         logger.error(f"Client {client_id} disconnected: {e}")
 
