@@ -8,23 +8,11 @@ fantasy roster performance with start/sit signals.
 import asyncio
 import json
 import logging
+import os
 import random
 import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
-
-# Import fantasy scoring
-try:
-    import os
-    import sys
-    sys.path.insert(0, os.path.dirname(__file__))
-    from fantasy_scoring import (
-        FantasyScoringCalculator,
-        PlayerStats,
-        format_fantasy_update,
-    )
-except ImportError:
-    pass
 
 try:
     import websockets
@@ -33,22 +21,22 @@ except ImportError:
     websockets = None
 
 # Configure logging
-logger = logging.getLogger('FantasyClientSim')
+logger = logging.getLogger("FantasyClientSim")
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '%(asctime)s | %(levelname)s | %(message)s',
-    datefmt='%H:%M:%S'
-))
+handler.setFormatter(
+    logging.Formatter("%(asctime)s | %(levelname)s | %(message)s", datefmt="%H:%M:%S")
+)
 logger.addHandler(handler)
 
 # Configuration
-EDGE_WS_URL = os.getenv('EDGE_WS_URL', "wss://api.blitz-obs.com/realtime")
+EDGE_WS_URL = os.getenv("EDGE_WS_URL", "wss://api.blitz-obs.com/realtime")
 
 
 @dataclass
 class FantasyPlayer:
     """Represents a player on a fantasy roster."""
+
     player_id: str
     player_name: str
     position: str  # QB, RB, WR, TE, K, DST
@@ -67,6 +55,7 @@ class FantasyPlayer:
 @dataclass
 class FantasyRoster:
     """Represents a user's fantasy roster for a specific league."""
+
     league_id: str
     user_id: str
     scoring_format: str = "ppr"  # ppr, half_ppr, standard
@@ -92,27 +81,40 @@ class FantasyRoster:
 
     def display_summary(self):
         """Display current roster status."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print(f"Fantasy Roster: {self.league_id} | User: {self.user_id}")
-        print(f"Scoring: {self.scoring_format.upper()} | Total: {self.total_points:.1f} pts")
-        print(f"vs Projection: {self.total_projected:.1f} pts ({self.total_points - self.total_projected:+.1f})")
-        print("-"*60)
+        print(
+            f"Scoring: {self.scoring_format.upper()} | Total: {self.total_points:.1f} pts"
+        )
+        print(
+            f"vs Projection: {self.total_projected:.1f} pts ({self.total_points - self.total_projected:+.1f})"
+        )
+        print("-" * 60)
 
-        for position in ['QB', 'RB', 'WR', 'TE', 'FLEX', 'K', 'DST']:
-            players_in_pos = [p for p in self.players.values() if p.position == position]
+        for position in ["QB", "RB", "WR", "TE", "FLEX", "K", "DST"]:
+            players_in_pos = [
+                p for p in self.players.values() if p.position == position
+            ]
             for player in players_in_pos:
                 vs_proj = player.current_points - player.projected_points
                 status = "🔥" if vs_proj > 5 else "⚠️" if vs_proj < -5 else "➡️"
-                print(f"{status} {position}: {player.player_name:<20} {player.current_points:>5.1f} pts (proj {player.projected_points:.1f})")
+                print(
+                    f"{status} {position}: {player.player_name:<20} {player.current_points:>5.1f} pts (proj {player.projected_points:.1f})"
+                )
 
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
 
 
 class FantasyClientSimulator:
     """Simulates a FantasyPros mobile client with real-time updates."""
 
-    def __init__(self, client_id: str, game_ids: List[str],
-                 league_id: Optional[str] = None, mode: str = "fantasy"):
+    def __init__(
+        self,
+        client_id: str,
+        game_ids: List[str],
+        league_id: Optional[str] = None,
+        mode: str = "fantasy",
+    ):
         self.client_id = client_id
         self.game_ids = game_ids
         self.league_id = league_id or f"demo_league_{client_id}"
@@ -127,7 +129,7 @@ class FantasyClientSimulator:
         self.roster = FantasyRoster(
             league_id=self.league_id,
             user_id=f"user_{self.client_id}",
-            scoring_format=random.choice(["ppr", "half_ppr", "standard"])
+            scoring_format=random.choice(["ppr", "half_ppr", "standard"]),
         )
 
         # Mock NFL players with projections
@@ -148,11 +150,13 @@ class FantasyClientSimulator:
                 player_name=name,
                 position=pos,
                 projected_points=proj,
-                scoring_format=self.roster.scoring_format
+                scoring_format=self.roster.scoring_format,
             )
             self.roster.add_player(player)
 
-        logger.info(f"Created mock roster with {len(mock_players)} players ({self.roster.scoring_format} scoring)")
+        logger.info(
+            f"Created mock roster with {len(mock_players)} players ({self.roster.scoring_format} scoring)"
+        )
 
     async def connect(self):
         """Connect to the edge WebSocket and handle updates."""
@@ -180,7 +184,7 @@ class FantasyClientSimulator:
                     "action": "subscribe",
                     "games": self.game_ids,
                     "league_id": self.league_id,
-                    "mode": self.mode
+                    "mode": self.mode,
                 }
                 await websocket.send(json.dumps(subscribe_msg))
                 logger.info(f"Subscribed to games: {self.game_ids}")
@@ -200,10 +204,10 @@ class FantasyClientSimulator:
         """Handle incoming WebSocket message."""
         try:
             data = json.loads(message)
-            msg_type = data.get('type', 'unknown')
+            msg_type = data.get("type", "unknown")
 
             # Calculate latency
-            server_ts = data.get('timestamp', 0)
+            server_ts = data.get("timestamp", 0)
             if server_ts:
                 latency = (time.time() * 1000) - server_ts
                 self.latency_history.append(latency)
@@ -211,13 +215,13 @@ class FantasyClientSimulator:
             else:
                 latency = 0
 
-            if msg_type == 'initial_state':
+            if msg_type == "initial_state":
                 # Handle initial state for late-joiners
                 logger.info("📥 Received initial state (KV cache)")
 
-            elif msg_type == 'delta':
+            elif msg_type == "delta":
                 # Handle fantasy delta update
-                delta_data = data.get('data', {})
+                delta_data = data.get("data", {})
                 await self.handle_fantasy_delta(delta_data, latency)
 
             else:
@@ -230,19 +234,21 @@ class FantasyClientSimulator:
 
     async def handle_fantasy_delta(self, data: Dict, latency: float):
         """Handle fantasy points delta update."""
-        player_id = data.get('player_id')
-        player_name = data.get('player_name', player_id)
+        player_id = data.get("player_id")
+        player_name = data.get("player_name", player_id)
 
         # Extract fantasy delta
-        fantasy_delta = data.get('fantasy_delta', {})
+        fantasy_delta = data.get("fantasy_delta", {})
 
         # Get points for our scoring format
-        format_delta = fantasy_delta.get(self.roster.scoring_format, {}) if self.roster else {}
-        points_delta = format_delta.get('points_delta', 0)
-        current_points = format_delta.get('current_points', 0)
+        format_delta = (
+            fantasy_delta.get(self.roster.scoring_format, {}) if self.roster else {}
+        )
+        points_delta = format_delta.get("points_delta", 0)
+        current_points = format_delta.get("current_points", 0)
 
         # Check for start/sit signal
-        signal = fantasy_delta.get('start_sit_signal')
+        signal = fantasy_delta.get("start_sit_signal")
 
         # Update roster if player is on our team
         if self.roster and player_id in self.roster.players:
@@ -295,7 +301,7 @@ async def run_multiple_clients(
     num_clients: int = 3,
     game_ids: List[str] = None,
     duration: int = 60,
-    mode: str = "fantasy"
+    mode: str = "fantasy",
 ):
     """Run multiple concurrent fantasy clients."""
     game_ids = game_ids or ["NFL_101", "NFL_102"]
@@ -310,7 +316,7 @@ async def run_multiple_clients(
             client_id=f"demo_user_{i}",
             game_ids=game_ids,
             league_id=f"fantasy_league_{i % 3}",  # 3 leagues
-            mode=mode
+            mode=mode,
         )
         client.create_mock_roster()
         clients.append(client)
@@ -320,16 +326,15 @@ async def run_multiple_clients(
 
     try:
         await asyncio.wait_for(
-            asyncio.gather(*tasks, return_exceptions=True),
-            timeout=duration
+            asyncio.gather(*tasks, return_exceptions=True), timeout=duration
         )
     except asyncio.TimeoutError:
         logger.info("⏰ Demo duration reached, stopping clients...")
 
     # Print final stats
-    logger.info("\n" + "="*60)
+    logger.info("\n" + "=" * 60)
     logger.info("FINAL STATISTICS")
-    logger.info("="*60)
+    logger.info("=" * 60)
 
     for client in clients:
         if client.latency_history:
@@ -346,14 +351,26 @@ def main():
     """Main entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description='FantasyPros Client Simulator')
-    parser.add_argument('--clients', type=int, default=3, help='Number of concurrent clients')
-    parser.add_argument('--duration', type=int, default=60, help='Demo duration in seconds')
-    parser.add_argument('--mode', choices=['fantasy', 'basic'], default='fantasy',
-                       help='Simulation mode')
-    parser.add_argument('--games', nargs='+', default=['NFL_101', 'NFL_102'],
-                       help='Game IDs to subscribe to')
-    parser.add_argument('--url', default=EDGE_WS_URL, help='WebSocket URL')
+    parser = argparse.ArgumentParser(description="FantasyPros Client Simulator")
+    parser.add_argument(
+        "--clients", type=int, default=3, help="Number of concurrent clients"
+    )
+    parser.add_argument(
+        "--duration", type=int, default=60, help="Demo duration in seconds"
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["fantasy", "basic"],
+        default="fantasy",
+        help="Simulation mode",
+    )
+    parser.add_argument(
+        "--games",
+        nargs="+",
+        default=["NFL_101", "NFL_102"],
+        help="Game IDs to subscribe to",
+    )
+    parser.add_argument("--url", default=EDGE_WS_URL, help="WebSocket URL")
 
     args = parser.parse_args()
 
@@ -372,12 +389,14 @@ def main():
     """)
 
     try:
-        asyncio.run(run_multiple_clients(
-            num_clients=args.clients,
-            game_ids=args.games,
-            duration=args.duration,
-            mode=args.mode
-        ))
+        asyncio.run(
+            run_multiple_clients(
+                num_clients=args.clients,
+                game_ids=args.games,
+                duration=args.duration,
+                mode=args.mode,
+            )
+        )
     except KeyboardInterrupt:
         logger.info("\n👋 Demo stopped by user")
     except Exception as e:

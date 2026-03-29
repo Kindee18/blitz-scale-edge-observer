@@ -15,15 +15,16 @@ from botocore.awsrequest import AWSRequest
 from kubernetes import client, config
 from kubernetes.client import Configuration
 
-logger = logging.getLogger('EKSAuth')
+logger = logging.getLogger("EKSAuth")
 logger.setLevel(logging.INFO)
 
-EKS_CLUSTER_NAME = os.getenv('EKS_CLUSTER_NAME', 'blitz-edge-cluster')
-AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
+EKS_CLUSTER_NAME = os.getenv("EKS_CLUSTER_NAME", "blitz-edge-cluster")
+AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
 
 class EKSAuthError(Exception):
     """Custom exception for EKS authentication failures."""
+
     pass
 
 
@@ -45,15 +46,15 @@ def get_eks_token(cluster_name: str, region: str = AWS_REGION) -> str:
     """
     try:
         # Create the STS presigned URL
-        boto3.client('sts', region_name=region)
+        boto3.client("sts", region_name=region)
 
         # The token is a signed URL to STS GetCallerIdentity
         # with the cluster ID as the audience
-        service_id = 'sts'
+        service_id = "sts"
         url = f"https://{service_id}.{region}.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15"
 
         # Create the request and sign it with SigV4
-        request = AWSRequest(method='GET', url=url)
+        request = AWSRequest(method="GET", url=url)
 
         # Sign the request
         session = boto3.Session()
@@ -65,18 +66,20 @@ def get_eks_token(cluster_name: str, region: str = AWS_REGION) -> str:
                 aws_access_key_id=frozen_credentials.access_key,
                 aws_secret_access_key=frozen_credentials.secret_key,
                 aws_session_token=frozen_credentials.token,
-                region_name=region
+                region_name=region,
             ).get_credentials(),
             service_id,
-            region
+            region,
         )
         signer.add_auth(request)
 
         # The token is the presigned URL, base64 encoded with the k8s-aws-v1 prefix
         presigned_url = request.url
-        encoded_url = base64.urlsafe_b64encode(
-            presigned_url.encode('utf-8')
-        ).decode('utf-8').rstrip('=')
+        encoded_url = (
+            base64.urlsafe_b64encode(presigned_url.encode("utf-8"))
+            .decode("utf-8")
+            .rstrip("=")
+        )
 
         token = f"k8s-aws-v1.{encoded_url}"
         logger.info(f"Generated EKS token for cluster: {cluster_name}")
@@ -90,7 +93,7 @@ def get_eks_token(cluster_name: str, region: str = AWS_REGION) -> str:
 def get_kubernetes_config(
     cluster_name: str = EKS_CLUSTER_NAME,
     region: str = AWS_REGION,
-    ca_cert_data: str = None
+    ca_cert_data: str = None,
 ) -> tuple:
     """Get configured Kubernetes API clients for an EKS cluster.
 
@@ -111,19 +114,20 @@ def get_kubernetes_config(
     """
     try:
         # Get cluster info from EKS
-        eks_client = boto3.client('eks', region_name=region)
+        eks_client = boto3.client("eks", region_name=region)
         response = eks_client.describe_cluster(name=cluster_name)
-        cluster = response['cluster']
+        cluster = response["cluster"]
 
-        endpoint = cluster['endpoint']
+        endpoint = cluster["endpoint"]
 
         # Get CA cert - in Lambda, we need to write it to a temp file
         if ca_cert_data is None:
-            ca_cert_data = cluster['certificateAuthority']['data']
+            ca_cert_data = cluster["certificateAuthority"]["data"]
 
         # Decode and write CA cert to temp file
         import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.crt') as ca_file:
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".crt") as ca_file:
             ca_cert_bytes = base64.b64decode(ca_cert_data)
             ca_file.write(ca_cert_bytes)
             ca_cert_path = ca_file.name
@@ -135,8 +139,8 @@ def get_kubernetes_config(
         configuration = Configuration()
         configuration.host = endpoint
         configuration.ssl_ca_cert = ca_cert_path
-        configuration.api_key['authorization'] = token
-        configuration.api_key_prefix['authorization'] = 'Bearer'
+        configuration.api_key["authorization"] = token
+        configuration.api_key_prefix["authorization"] = "Bearer"
 
         # Set timeouts
         configuration.connect_timeout = 10
@@ -148,7 +152,9 @@ def get_kubernetes_config(
         apps_v1 = client.AppsV1Api()
         core_v1 = client.CoreV1Api()
 
-        logger.info(f"Successfully configured Kubernetes client for cluster: {cluster_name}")
+        logger.info(
+            f"Successfully configured Kubernetes client for cluster: {cluster_name}"
+        )
         return apps_v1, core_v1, configuration
 
     except client.exceptions.ApiException as e:
@@ -160,8 +166,7 @@ def get_kubernetes_config(
 
 
 def test_cluster_connection(
-    apps_v1: client.AppsV1Api,
-    core_v1: client.CoreV1Api
+    apps_v1: client.AppsV1Api, core_v1: client.CoreV1Api
 ) -> dict:
     """Test the cluster connection by listing namespaces and deployments.
 
@@ -178,23 +183,23 @@ def test_cluster_connection(
         ns_count = len(namespaces.items)
 
         # Try to list deployments in default namespace
-        deployments = apps_v1.list_namespaced_deployment(namespace='default')
+        deployments = apps_v1.list_namespaced_deployment(namespace="default")
         deployment_count = len(deployments.items)
 
         return {
-            'connected': True,
-            'namespaces': ns_count,
-            'deployments_in_default': deployment_count,
-            'error': None
+            "connected": True,
+            "namespaces": ns_count,
+            "deployments_in_default": deployment_count,
+            "error": None,
         }
 
     except Exception as e:
         logger.error(f"Cluster connection test failed: {e}")
         return {
-            'connected': False,
-            'namespaces': 0,
-            'deployments_in_default': 0,
-            'error': str(e)
+            "connected": False,
+            "namespaces": 0,
+            "deployments_in_default": 0,
+            "error": str(e),
         }
 
 
