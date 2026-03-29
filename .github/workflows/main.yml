@@ -25,6 +25,7 @@ permissions:
   id-token: write
   contents: read
   pull-requests: write
+  security-events: write
 
 env:
   AWS_REGION: us-east-1
@@ -53,6 +54,7 @@ jobs:
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: terraform
+          github_token: ${{ github.token }}
           additional_args: --verbose --format sarif --out reports/tfsec.sarif
 
       - name: Terraform Security Scan (Checkov)
@@ -70,7 +72,7 @@ jobs:
           npm run build --if-present
 
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: reports/
