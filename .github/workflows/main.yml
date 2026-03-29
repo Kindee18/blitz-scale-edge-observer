@@ -70,7 +70,7 @@ jobs:
           npm run build --if-present
 
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: reports/
