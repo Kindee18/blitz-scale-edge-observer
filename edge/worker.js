@@ -21,10 +21,72 @@ export class GameTrackerDO {
     this.state = state;
     this.env = env;
     // Sessions will be restored from hibernation automatically
-    this.sessions = new Map(); // Map<webSocket, {connectedAt, clientInfo}>
+    this.sessions = new Map(); // Map<webSocket, {connectedAt, clientInfo, lastPing}>
     this.gameId = null; // Will be set on first request
     this.messageCount = 0;
     this.lastActivity = Date.now();
+    this.rateLimiter = new Map(); // clientId -> {count, windowStart}
+    
+    // WebSocket resilience configuration
+    this.PING_INTERVAL = 30000; // 30 seconds
+    this.PING_TIMEOUT = 10000; // 10 seconds to respond
+    this.RATE_LIMIT_WINDOW = 60000; // 1 minute
+    this.RATE_LIMIT_MAX = 100; // 100 messages per minute per client
+    
+    // Start heartbeat checker
+    this.startHeartbeatChecker();
+  }
+  
+  // Periodic heartbeat to detect stale connections
+  startHeartbeatChecker() {
+    setInterval(() => {
+      const now = Date.now();
+      this.sessions.forEach((sessionInfo, ws) => {
+        if (ws.readyState === 1) { // WebSocket.OPEN
+          // Check if client missed ping
+          if (sessionInfo.lastPing && (now - sessionInfo.lastPing) > this.PING_INTERVAL + this.PING_TIMEOUT) {
+            console.warn(`Client ${sessionInfo.clientId} missed ping, closing connection`);
+            ws.close(1001, 'Ping timeout');
+            this.sessions.delete(ws);
+          } else {
+            // Send ping
+            try {
+              ws.send(JSON.stringify({ type: 'ping', timestamp: now }));
+            } catch (e) {
+              console.error(`Failed to send ping to ${sessionInfo.clientId}`, e);
+            }
+          }
+        }
+      });
+    }, this.PING_INTERVAL);
+  }
+  
+  // Rate limiting check
+  checkRateLimit(clientId) {
+    const now = Date.now();
+    const windowStart = Math.floor(now / this.RATE_LIMIT_WINDOW) * this.RATE_LIMIT_WINDOW;
+    
+    if (!this.rateLimiter.has(clientId)) {
+      this.rateLimiter.set(clientId, { count: 1, windowStart });
+      return true;
+    }
+    
+    const limiter = this.rateLimiter.get(clientId);
+    
+    // Reset if new window
+    if (limiter.windowStart !== windowStart) {
+      limiter.count = 1;
+      limiter.windowStart = windowStart;
+      return true;
+    }
+    
+    // Check limit
+    if (limiter.count >= this.RATE_LIMIT_MAX) {
+      return false;
+    }
+    
+    limiter.count++;
+    return true;
   }
 
   async fetch(request) {
@@ -51,13 +113,13 @@ export class GameTrackerDO {
         const [client, server] = Object.values(new WebSocketPair());
         server.accept();
         
-        // Store session metadata
-        this.sessions.set(server, clientInfo);
+        // Store session metadata with ping tracking
+        this.sessions.set(server, { ...clientInfo, lastPing: Date.now(), reconnectAttempts: 0 });
         this.lastActivity = Date.now();
         
         // Handle close with cleanup
         server.addEventListener("close", (event) => {
-          logger.info("WebSocket closed", { gameId: this.gameId, clientId: clientInfo.clientId, code: event.code });
+          logger.info("WebSocket closed", { gameId: this.gameId, clientId: clientInfo.clientId, code: event.code, reason: event.reason });
           this.sessions.delete(server);
           this.lastActivity = Date.now();
         });
@@ -66,6 +128,35 @@ export class GameTrackerDO {
         server.addEventListener("error", (error) => {
           logger.error("WebSocket error", error, { gameId: this.gameId, clientId: clientInfo.clientId });
           this.sessions.delete(server);
+        });
+        
+        // Handle pong responses for connection health
+        server.addEventListener("message", (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            // Handle pong response
+            if (data.type === 'pong') {
+              const session = this.sessions.get(server);
+              if (session) {
+                session.lastPing = Date.now();
+                logger.debug("Pong received", { clientId: clientInfo.clientId, latency: Date.now() - data.timestamp });
+              }
+            }
+            
+            // Handle subscription messages with rate limiting
+            if (data.type === 'subscribe') {
+              if (!this.checkRateLimit(clientInfo.clientId)) {
+                logger.warn("Rate limit exceeded", { clientId: clientInfo.clientId });
+                server.send(JSON.stringify({ type: 'error', message: 'Rate limit exceeded. Please slow down.' }));
+                return;
+              }
+              
+              logger.info("Subscription update", { clientId: clientInfo.clientId, games: data.games });
+            }
+          } catch (e) {
+            logger.error("Failed to parse message", e, { clientId: clientInfo.clientId });
+          }
         });
 
         // Send welcome message with current game state from KV
