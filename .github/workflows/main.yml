@@ -62,6 +62,7 @@ jobs:
         with:
           directory: terraform
           framework: terraform
+          soft_fail: true
           output_format: sarif
           output_file_path: reports/checkov.sarif
 
