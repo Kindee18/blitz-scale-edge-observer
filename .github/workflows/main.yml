@@ -29,6 +29,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
+  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
   PYTHON_VERSION: '3.11'
 
 jobs:
@@ -128,7 +129,7 @@ jobs:
   terraform-plan:
     name: "📋 Terraform Plan"
     needs: test-gate
-    if: ${{ secrets.AWS_ROLE_ARN != '' }}
+    if: ${{ env.AWS_ROLE_ARN != '' }}
     runs-on: ubuntu-latest
     outputs:
       plan_exitcode: ${{ steps.plan.outputs.exitcode }}
