@@ -36,7 +36,7 @@ async def test_compute_deltas_batched_no_previous_state():
     deltas = await compute_deltas_batched(records, mock_redis)
     
     assert len(deltas) == 2
-    assert deltas[0]["delta"] == {"score": 10}
+    assert deltas[0]["stat_delta"] == {"score": 10}
     assert deltas[0]["is_full"] is True
 
 @pytest.mark.asyncio
@@ -59,7 +59,7 @@ async def test_compute_deltas_batched_with_partial_change():
     deltas = await compute_deltas_batched(records, mock_redis)
     
     assert len(deltas) == 1
-    assert deltas[0]["delta"] == {"yards": 60}
+    assert deltas[0]["stat_delta"] == {"yards": 60}
     assert deltas[0]["is_full"] is False
 
 @pytest.mark.asyncio
