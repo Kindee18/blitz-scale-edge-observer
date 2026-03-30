@@ -61,14 +61,14 @@ run-demo: setup
 	@echo "🎮 Starting Blitz-Scale Edge Observer Demo..."
 	@echo ""
 	@echo "Step 1: Testing predictive scaling (dry-run)..."
-	DRY_RUN_MODE=true python scaling/scheduled_scaler_lambda.py
+	DRY_RUN_MODE=true python3 scaling/scheduled_scaler_lambda.py
 	@echo ""
 	@echo "Step 2: Injecting test fantasy events..."
-	python scripts/inject_test_events.py --count 5
+	python3 scripts/inject_test_events.py --count 5
 	@echo ""
 	@echo "Step 3: Starting fantasy client simulator..."
 	@echo "(Press Ctrl+C to stop)"
-	python streaming/fantasy_client_sim.py --mode fantasy --duration 60
+	python3 streaming/fantasy_client_sim.py --mode fantasy --duration 60
 
 demo-scaling:
 	@echo "🔄 Running predictive scaling in dry-run mode..."
@@ -76,11 +76,11 @@ demo-scaling:
 
 demo-client:
 	@echo "📱 Starting fantasy client simulator..."
-	python streaming/fantasy_client_sim.py --mode fantasy
+	python3 streaming/fantasy_client_sim.py --mode fantasy
 
 demo-inject:
 	@echo "🎯 Injecting test fantasy events..."
-	python scripts/inject_test_events.py --count 10 --game-id NFL_101
+	python3 scripts/inject_test_events.py --count 10 --game-id NFL_101
 
 validate-scaler-dryrun:
 	@echo "🔍 Validating predictive scaler (dry-run)..."

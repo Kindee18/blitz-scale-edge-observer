@@ -351,6 +351,8 @@ def main():
     """Main entry point."""
     import argparse
 
+    global EDGE_WS_URL
+
     parser = argparse.ArgumentParser(description="FantasyPros Client Simulator")
     parser.add_argument(
         "--clients", type=int, default=3, help="Number of concurrent clients"
@@ -375,7 +377,6 @@ def main():
     args = parser.parse_args()
 
     # Update global URL if provided
-    global EDGE_WS_URL
     EDGE_WS_URL = args.url
 
     print("""
