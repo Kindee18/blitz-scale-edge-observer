@@ -119,7 +119,7 @@ setup_python_deps() {
     log_info "Installing Python dependencies..."
     cd "${PROJECT_ROOT}"
     pip install -q boto3 pydantic aioredis aiohttp kubernetes aws-xray-sdk \
-        opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-botocore 2>/dev/null || true
+        opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-botocore websockets 2>/dev/null || true
     log_success "Python dependencies installed"
 }
 

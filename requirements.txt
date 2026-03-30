@@ -1,0 +1,12 @@
+boto3
+pydantic
+aioredis
+aiohttp
+kubernetes
+aws-xray-sdk
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-botocore
+websockets
+pytest
+pytest-asyncio

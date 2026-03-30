@@ -134,7 +134,7 @@ format:
 setup:
 	@echo "📦 Setting up development environment..."
 	pip install -r requirements.txt 2>/dev/null || pip install boto3 pydantic aioredis aiohttp kubernetes aws-xray-sdk \
-		opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-botocore
+		opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-botocore websockets
 	cd edge && npm install 2>/dev/null || echo "⚠️  Node.js dependencies skipped"
 	@echo "✅ Setup complete"
 
