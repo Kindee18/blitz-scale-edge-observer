@@ -135,6 +135,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build Lambda layer artifact
+        run: |
+          rm -rf /tmp/lambda_layer
+          mkdir -p /tmp/lambda_layer/python
+          cd /tmp/lambda_layer
+          pip install --target=python \
+            boto3 kubernetes botocore urllib3 certifi charset-normalizer \
+            idna requests six python-dateutil pyyaml google-auth oauthlib \
+            requests-oauthlib --quiet
+          find python -name "*.pyc" -delete
+          find python -name "__pycache__" -type d -exec rm -rf {} +
+          find python -name "*.dist-info" -type d -exec rm -rf {} +
+          zip -r lambda_layer.zip python/ -q
+          mv lambda_layer.zip "${GITHUB_WORKSPACE}/terraform/eks/lambda_layer.zip"
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -201,6 +221,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build Lambda layer artifact
+        run: |
+          rm -rf /tmp/lambda_layer
+          mkdir -p /tmp/lambda_layer/python
+          cd /tmp/lambda_layer
+          pip install --target=python \
+            boto3 kubernetes botocore urllib3 certifi charset-normalizer \
+            idna requests six python-dateutil pyyaml google-auth oauthlib \
+            requests-oauthlib --quiet
+          find python -name "*.pyc" -delete
+          find python -name "__pycache__" -type d -exec rm -rf {} +
+          find python -name "*.dist-info" -type d -exec rm -rf {} +
+          zip -r lambda_layer.zip python/ -q
+          mv lambda_layer.zip "${GITHUB_WORKSPACE}/terraform/eks/lambda_layer.zip"
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -241,6 +281,26 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build Lambda layer artifact
+        run: |
+          rm -rf /tmp/lambda_layer
+          mkdir -p /tmp/lambda_layer/python
+          cd /tmp/lambda_layer
+          pip install --target=python \
+            boto3 kubernetes botocore urllib3 certifi charset-normalizer \
+            idna requests six python-dateutil pyyaml google-auth oauthlib \
+            requests-oauthlib --quiet
+          find python -name "*.pyc" -delete
+          find python -name "__pycache__" -type d -exec rm -rf {} +
+          find python -name "*.dist-info" -type d -exec rm -rf {} +
+          zip -r lambda_layer.zip python/ -q
+          mv lambda_layer.zip "${GITHUB_WORKSPACE}/terraform/eks/lambda_layer.zip"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
