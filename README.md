@@ -126,6 +126,48 @@ blitz-scale-edge-observer/
 
 ## 📖 Complete Usage Guide
 
+## 🧾 Generated Files (What `htmlcov/` Is)
+
+When tests run with coverage enabled, Python creates an `htmlcov/` folder.
+
+- It is a generated coverage report (not application code).
+- It is safe to delete and regenerate at any time.
+- In CI, this folder is uploaded as a test artifact for coverage review.
+- If your editor shows warnings inside `htmlcov/`, those warnings are for generated HTML/CSS, not project source bugs.
+
+## 🛡️ Production Hardening Extensions
+
+The showcase now includes core hardening features for production-like behavior:
+
+- **JWT auth + league scoping (Edge Worker):** Optional `REQUIRE_JWT_AUTH` gate with HS256 signature checks, optional issuer/audience validation, and league authorization (`leagues` claim).
+- **Feature-flag rollout hooks:** Global, per-user, and per-league realtime gates via KV keys plus `WS_ROLLOUT_PERCENT` cohort rollout.
+- **Delta processor reliability:** Input validation, malformed record DLQ forwarding, duplicate suppression, chunked processing, retries, and edge push circuit breaker.
+- **Reconnect + replay support:** WebSocket clients can reconnect using `since_ts`, and Durable Objects replay buffered deltas when available.
+- **Multi-sport scoring support:** `fantasy_scoring.py` now supports demo scoring models for NFL, NBA, MLB, and NHL.
+- **Alerting hooks:** Optional SNS and PagerDuty webhook alerts for key failure modes (e.g., Redis unavailable, malformed feed spikes, edge circuit open).
+
+### Related Runtime Environment Variables
+
+```bash
+# Edge auth and rollout
+REQUIRE_JWT_AUTH=true|false
+JWT_SECRET=<secret>
+JWT_ISSUER=<optional>
+JWT_AUDIENCE=<optional>
+WS_ROLLOUT_PERCENT=0-100
+
+# Delta processor resilience
+DELTA_PROCESSOR_DLQ_URL=<sqs_url>
+EVENT_DEDUPE_TTL_SECONDS=300
+DELTA_PROCESSOR_CHUNK_SIZE=200
+EDGE_CIRCUIT_FAILURE_THRESHOLD=3
+EDGE_CIRCUIT_COOLDOWN_SECONDS=30
+
+# Alerting
+ALERTS_SNS_TOPIC_ARN=<sns_topic_arn>
+PAGERDUTY_WEBHOOK_URL=<optional_webhook>
+```
+
 ### Prerequisites
 
 ```bash

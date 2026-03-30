@@ -523,4 +523,43 @@ aws ce get-cost-and-usage \
 
 ---
 
+## Auth, Replay, and Alerting Operations
+
+### WebSocket Auth Validation Checks
+
+```bash
+# Verify auth secrets and rollout controls are present
+cd edge
+wrangler secret list
+```
+
+Operational notes:
+
+- `REQUIRE_JWT_AUTH=true` enforces Bearer JWT validation on `/realtime`.
+- League scope is enforced against the JWT `leagues` claim when present.
+- Optional strict checks: `JWT_ISSUER`, `JWT_AUDIENCE`.
+
+### Replay / Reconnect Behavior
+
+- Clients reconnect with `since_ts=<last_server_timestamp>`.
+- Durable Object replays buffered delta events newer than `since_ts` when available.
+- If replay history is exhausted, clients still receive KV-backed `initial_state`.
+
+### Alert Routing Setup
+
+Configure one or both alert channels in Delta Processor Lambda environment:
+
+```bash
+ALERTS_SNS_TOPIC_ARN=arn:aws:sns:us-east-1:123456789012:blitz-edge-alerts
+PAGERDUTY_WEBHOOK_URL=https://events.pagerduty.com/integration/...
+```
+
+Current high-priority alert triggers:
+
+- Edge push circuit breaker opening
+- Redis unavailable for delta computation
+- Malformed record spikes
+
+---
+
 _Version 1.1.0 | Maintained by Platform Engineering_

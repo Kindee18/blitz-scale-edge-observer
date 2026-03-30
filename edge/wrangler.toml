@@ -18,3 +18,11 @@ new_classes = ["GameTrackerDO"]
 [vars]
 # Keep non-sensitive runtime config here only.
 # WEBHOOK_SECRET_TOKEN must be provisioned via `wrangler secret put WEBHOOK_SECRET_TOKEN`.
+# REQUIRE_JWT_AUTH: true/false gate for websocket JWT enforcement.
+# JWT_SECRET must be provisioned via `wrangler secret put JWT_SECRET` when auth is enabled.
+# JWT_ISSUER and JWT_AUDIENCE are optional strict claim checks.
+# WS_ROLLOUT_PERCENT: 0-100 cohort rollout percentage for realtime websocket.
+REQUIRE_JWT_AUTH = "false"
+WS_ROLLOUT_PERCENT = "100"
+JWT_ISSUER = ""
+JWT_AUDIENCE = ""

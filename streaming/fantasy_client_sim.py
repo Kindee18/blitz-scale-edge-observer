@@ -6,6 +6,7 @@ fantasy roster performance with start/sit signals.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -123,6 +124,8 @@ class FantasyClientSimulator:
         self.latency_history: List[float] = []
         self.update_count = 0
         self.start_time = time.time()
+        self.last_server_timestamp = 0
+        self.reconnect_attempts = 0
 
     def create_mock_roster(self):
         """Create a mock fantasy roster for demo purposes."""
@@ -163,44 +166,50 @@ class FantasyClientSimulator:
         if not websockets:
             logger.error("websockets module not installed. Run: pip install websockets")
             return
+        while True:
+            try:
+                # Build connection URL with replay cursor for resumable sessions
+                params = [f"client_id={self.client_id}"]
+                if self.game_ids:
+                    params.append(f"game_id={self.game_ids[0]}")
+                if self.league_id:
+                    params.append(f"league_id={self.league_id}")
+                if self.last_server_timestamp > 0:
+                    params.append(f"since_ts={self.last_server_timestamp}")
 
-        # Build connection URL with parameters
-        params = [f"client_id={self.client_id}"]
-        if self.game_ids:
-            params.append(f"game_id={self.game_ids[0]}")
-        if self.league_id:
-            params.append(f"league_id={self.league_id}")
+                url = f"{EDGE_WS_URL}?{'&'.join(params)}"
+                logger.info(f"Connecting to {url}...")
 
-        url = f"{EDGE_WS_URL}?{'&'.join(params)}"
+                async with websockets.connect(url) as websocket:
+                    self.reconnect_attempts = 0
+                    logger.info(f"✅ Client {self.client_id} connected to edge")
 
-        logger.info(f"Connecting to {url}...")
+                    subscribe_msg = {
+                        "action": "subscribe",
+                        "games": self.game_ids,
+                        "league_id": self.league_id,
+                        "mode": self.mode,
+                    }
+                    await websocket.send(json.dumps(subscribe_msg))
+                    logger.info(f"Subscribed to games: {self.game_ids}")
 
-        try:
-            async with websockets.connect(url) as websocket:
-                logger.info(f"✅ Client {self.client_id} connected to edge")
+                    if self.roster:
+                        self.roster.display_summary()
 
-                # Send subscription message
-                subscribe_msg = {
-                    "action": "subscribe",
-                    "games": self.game_ids,
-                    "league_id": self.league_id,
-                    "mode": self.mode,
-                }
-                await websocket.send(json.dumps(subscribe_msg))
-                logger.info(f"Subscribed to games: {self.game_ids}")
+                    async for message in websocket:
+                        await self.handle_message(websocket, message)
 
-                # Display initial roster
-                if self.roster:
-                    self.roster.display_summary()
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                self.reconnect_attempts += 1
+                backoff = min(10, (2 ** min(self.reconnect_attempts, 5)) + random.uniform(0, 0.5))
+                logger.error(
+                    f"❌ Connection error: {e} | reconnect attempt {self.reconnect_attempts} in {backoff:.1f}s"
+                )
+                await asyncio.sleep(backoff)
 
-                # Listen for updates
-                async for message in websocket:
-                    await self.handle_message(message)
-
-        except Exception as e:
-            logger.error(f"❌ Connection error: {e}")
-
-    async def handle_message(self, message: str):
+    async def handle_message(self, websocket, message: str):
         """Handle incoming WebSocket message."""
         try:
             data = json.loads(message)
@@ -212,14 +221,19 @@ class FantasyClientSimulator:
                 latency = (time.time() * 1000) - server_ts
                 self.latency_history.append(latency)
                 self.update_count += 1
+                self.last_server_timestamp = max(self.last_server_timestamp, int(server_ts))
             else:
                 latency = 0
+
+            if msg_type == "ping":
+                await websocket.send(json.dumps({"type": "pong", "timestamp": int(time.time() * 1000)}))
+                return
 
             if msg_type == "initial_state":
                 # Handle initial state for late-joiners
                 logger.info("📥 Received initial state (KV cache)")
 
-            elif msg_type == "delta":
+            elif msg_type in ["delta", "delta_replay"]:
                 # Handle fantasy delta update
                 delta_data = data.get("data", {})
                 await self.handle_fantasy_delta(delta_data, latency)
@@ -322,14 +336,18 @@ async def run_multiple_clients(
         clients.append(client)
 
     # Run clients concurrently with timeout
-    tasks = [client.connect() for client in clients]
+    tasks = [asyncio.create_task(client.connect()) for client in clients]
 
     try:
-        await asyncio.wait_for(
-            asyncio.gather(*tasks, return_exceptions=True), timeout=duration
-        )
+        await asyncio.sleep(duration)
     except asyncio.TimeoutError:
         logger.info("⏰ Demo duration reached, stopping clients...")
+    finally:
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
     # Print final stats
     logger.info("\n" + "=" * 60)

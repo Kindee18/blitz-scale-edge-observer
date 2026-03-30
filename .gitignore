@@ -24,3 +24,4 @@ dist/
 .DS_Store
 dummy.zip
 .env.secrets
+.vscode/

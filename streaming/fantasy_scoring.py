@@ -220,11 +220,84 @@ class FantasyScoringCalculator:
         }
 
 
+def _sport_stat_weights(sport: str) -> Dict[str, float]:
+    # Conservative defaults for cross-sport demo support.
+    if sport == "nba":
+        return {
+            "points": 1.0,
+            "rebounds": 1.2,
+            "assists": 1.5,
+            "steals": 3.0,
+            "blocks": 3.0,
+            "turnovers": -1.0,
+            "three_pointers_made": 0.5,
+        }
+    if sport == "mlb":
+        return {
+            "hits": 3.0,
+            "doubles": 5.0,
+            "triples": 8.0,
+            "home_runs": 10.0,
+            "rbi": 2.0,
+            "runs": 2.0,
+            "walks": 2.0,
+            "stolen_bases": 5.0,
+            "innings_pitched": 2.0,
+            "strikeouts": 2.0,
+            "wins": 6.0,
+            "saves": 8.0,
+            "earned_runs": -2.0,
+        }
+    if sport == "nhl":
+        return {
+            "goals": 6.0,
+            "assists": 4.0,
+            "shots_on_goal": 0.9,
+            "blocked_shots": 1.0,
+            "saves": 0.2,
+            "wins": 6.0,
+            "shutouts": 4.0,
+        }
+    return {}
+
+
+def _calculate_generic_sport_points(stats: Dict, sport: str) -> float:
+    weights = _sport_stat_weights(sport)
+    total = 0.0
+    for stat_name, weight in weights.items():
+        total += float(stats.get(stat_name, 0) or 0) * weight
+    return round(total, 2)
+
+
+def _calculate_generic_sport_delta(old_stats: Dict, new_stats: Dict, sport: str) -> Dict:
+    previous_points = _calculate_generic_sport_points(old_stats, sport)
+    current_points = _calculate_generic_sport_points(new_stats, sport)
+    points_delta = round(current_points - previous_points, 2)
+
+    breakdown_delta = {}
+    for stat_name, weight in _sport_stat_weights(sport).items():
+        old_val = float(old_stats.get(stat_name, 0) or 0)
+        new_val = float(new_stats.get(stat_name, 0) or 0)
+        breakdown_delta[stat_name] = round((new_val - old_val) * weight, 2)
+
+    breakdown_delta["total"] = points_delta
+    return {
+        "previous_points": previous_points,
+        "current_points": current_points,
+        "points_delta": points_delta,
+        "breakdown_delta": breakdown_delta,
+        "significant_change": abs(points_delta) >= 0.5,
+    }
+
+
 # Convenience functions for common use cases
 
 
 def calculate_fantasy_points(
-    stats: Dict, format: str = "ppr", **scoring_overrides
+    stats: Dict,
+    format: str = "ppr",
+    sport: str = "nfl",
+    **scoring_overrides,
 ) -> float:
     """Quick function to calculate fantasy points from a stats dictionary.
 
@@ -236,6 +309,9 @@ def calculate_fantasy_points(
     Returns:
         Total fantasy points
     """
+    if sport and sport.lower() != "nfl":
+        return _calculate_generic_sport_points(stats, sport.lower())
+
     player_stats = PlayerStats.from_dict(stats)
     scoring_format = ScoringFormat(format.lower())
     calculator = FantasyScoringCalculator(**scoring_overrides)
@@ -243,7 +319,11 @@ def calculate_fantasy_points(
 
 
 def calculate_fantasy_delta(
-    old_stats: Dict, new_stats: Dict, format: str = "ppr", **scoring_overrides
+    old_stats: Dict,
+    new_stats: Dict,
+    format: str = "ppr",
+    sport: str = "nfl",
+    **scoring_overrides,
 ) -> Dict:
     """Quick function to calculate fantasy points delta.
 
@@ -256,6 +336,9 @@ def calculate_fantasy_delta(
     Returns:
         Delta information dictionary
     """
+    if sport and sport.lower() != "nfl":
+        return _calculate_generic_sport_delta(old_stats, new_stats, sport.lower())
+
     old_player_stats = PlayerStats.from_dict(old_stats)
     new_player_stats = PlayerStats.from_dict(new_stats)
     scoring_format = ScoringFormat(format.lower())
