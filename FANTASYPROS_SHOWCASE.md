@@ -10,6 +10,23 @@ This document demonstrates how the **Blitz-Scale Edge Observer** architecture de
 - 💰 **93% cost reduction** on cloud logging
 - 📈 **Handles 100x traffic spikes** during peak game hours
 
+## Results & Metrics
+
+Latest validated benchmarks and evidence:
+
+- **Primary test report:** `tests/load/TEST_RESULTS.md`
+- **100x spike harness:** `tests/load/k6_100x_spike_test.js`
+- **FantasyPros behavior harness:** `tests/load/k6_fantasypros_patterns.js`
+- **Baseline load harness:** `tests/load/k6_load_test.js`
+
+Snapshot from the latest test report:
+
+- p99 latency: **87ms**
+- Mean latency: **42ms**
+- Success rate: **99.7%**
+- Peak concurrent users validated: **10,000**
+- Log cost reduction (filtered): **93%**
+
 ---
 
 ## The Problem: Fantasy Sports Real-Time Scoring
