@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD009 MD022 MD031 MD032 MD036 MD051 MD060 -->
+
 # Blitz-Scale Edge Observer - Operational Runbook
 
 ## Table of Contents
@@ -448,6 +450,32 @@ wrangler kv:bulk delete --namespace-id=$GAME_STATE_KV_ID --file=keys_to_delete.t
 # Redis cache flush (if corrupted)
 redis-cli -u $REDIS_URL FLUSHDB
 ```
+
+### Chaos Validation Checklist
+
+Run this checklist at least once per release candidate to validate resilience assumptions:
+
+1. Redis failover simulation: verify fallback path and latency delta are documented.
+2. Kinesis shard pressure: verify iterator age recovery after shard scale-out.
+3. Worker cold-start drill: verify reconnection behavior and stale-cache window.
+4. Scaler lock contention: verify DynamoDB lock TTL expiry and lock-owner logging.
+5. Lambda retry path: verify failed batches land in DLQ and alarms trigger.
+
+Capture evidence for each drill in:
+
+- `tests/load/TEST_RESULTS.md`
+- CloudWatch alarm history screenshots
+- Relevant log excerpts from `/aws/lambda/*`
+
+### Rollback Verification (Post-Action)
+
+After any rollback, complete all checks before declaring recovery:
+
+1. `terraform plan` shows no unintended drift for critical modules.
+2. WebSocket `/health` endpoint returns success and active sessions recover.
+3. Kinesis iterator age drops back to baseline range.
+4. No active `ScalingErrors` alarms for 15 minutes.
+5. Incident timeline and final root cause are appended to release notes.
 
 ---
 

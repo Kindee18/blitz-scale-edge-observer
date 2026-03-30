@@ -21,30 +21,25 @@ resource "helm_release" "karpenter" {
   chart      = "karpenter"
   version    = "v0.32.0"
 
-  set {
-    name  = "settings.clusterName"
-    value = module.eks.cluster_name
-  }
-
-  set {
-    name  = "settings.clusterEndpoint"
-    value = module.eks.cluster_endpoint
-  }
-
-  set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = module.karpenter.irsa_arn
-  }
-
-  # Ensure Karpenter pods run on system nodes, not nodes they provision themselves
-  set {
-    name  = "tolerations[0].key"
-    value = "CriticalAddonsOnly"
-  }
-  set {
-    name  = "tolerations[0].operator"
-    value = "Exists"
-  }
+  values = [
+    yamlencode({
+      settings = {
+        clusterName     = module.eks.cluster_name
+        clusterEndpoint = module.eks.cluster_endpoint
+      }
+      serviceAccount = {
+        annotations = {
+          "eks.amazonaws.com/role-arn" = module.karpenter.irsa_arn
+        }
+      }
+      tolerations = [
+        {
+          key      = "CriticalAddonsOnly"
+          operator = "Exists"
+        }
+      ]
+    })
+  ]
 }
 
 # NodePool CRD (Conceptual representation in Terraform for readability)

@@ -26,6 +26,12 @@ provider "aws" {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
+data "aws_secretsmanager_secret" "edge_token" {
+  name = "blitz-edge-webhook-token"
+}
+
 resource "aws_kinesis_stream" "fantasy_sports_stream" {
   name             = "fantasy-sports-realtime-ingest"
   shard_count      = 10
@@ -46,9 +52,8 @@ resource "aws_kinesis_stream" "fantasy_sports_stream" {
 }
 
 resource "aws_sqs_queue" "delta_processor_dlq" {
-  name                              = "blitz-delta-processor-dlq"
-  kms_master_key_id                 = aws_kms_key.blitz_key.arn
-  sqs_managed_encryption_enabled = true
+  name              = "blitz-delta-processor-dlq"
+  kms_master_key_id = aws_kms_key.blitz_key.arn
 }
 
 resource "aws_iam_role" "lambda_kinesis_role" {
@@ -70,7 +75,6 @@ resource "aws_iam_role" "lambda_kinesis_role" {
 
 resource "aws_iam_role_policy" "lambda_scoped_access" {
   name        = "blitz-lambda-scoped-access"
-  description = "Scoped access for Lambda to Secrets Manager and DynamoDB"
   role        = aws_iam_role.lambda_kinesis_role.id
 
   policy = jsonencode({
@@ -81,7 +85,7 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
           "secretsmanager:GetSecretValue"
         ]
         Effect   = "Allow"
-        Resource = [aws_secretsmanager_secret.edge_token.arn]
+        Resource = [data.aws_secretsmanager_secret.edge_token.arn]
       },
       {
         Action = [
@@ -116,7 +120,7 @@ resource "aws_lambda_function" "delta_processor" {
     variables = {
       REDIS_URL             = "redis://blitz-cache.redis.amazonaws.com:6379"
       EDGE_WEBHOOK_URL      = "https://api.blitz-obs.com/webhook/update"
-      WEBHOOK_SECRET_TOKEN  = "secure-edge-token-12345"
+      WEBHOOK_SECRET_NAME   = "blitz-edge-webhook-token"
     }
   }
 }

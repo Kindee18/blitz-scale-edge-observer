@@ -18,7 +18,9 @@ from pydantic import BaseModel, validator
 
 # Add streaming directory to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from fantasy_scoring import calculate_fantasy_delta, generate_start_sit_signal
+from monitoring.custom_metrics import DeltaProcessorMetrics
 
 _instrumented = False
 
@@ -39,15 +41,12 @@ def setup_instrumentation():
     _instrumented = True
 
 
-cw = boto3.client("cloudwatch", region_name=os.getenv("AWS_REGION", "us-east-1"))
+METRICS = DeltaProcessorMetrics(region=os.getenv("AWS_REGION", "us-east-1"))
 
 
 def publish_metric(name, value, unit="None"):
     try:
-        cw.put_metric_data(
-            Namespace="BlitzScale/Edge",
-            MetricData=[{"MetricName": name, "Value": value, "Unit": unit}],
-        )
+        METRICS.emit(name, value, unit)
     except Exception as e:
         logger.error(f"Metric error: {e}")
 
@@ -130,7 +129,8 @@ def get_secret(secret_name):
         return os.getenv("WEBHOOK_SECRET_TOKEN")  # Fallback for local dev
 
 
-WEBHOOK_SECRET_TOKEN = get_secret("blitz-edge-webhook-token")
+WEBHOOK_SECRET_NAME = os.getenv("WEBHOOK_SECRET_NAME", "blitz-edge-webhook-token")
+WEBHOOK_SECRET_TOKEN = get_secret(WEBHOOK_SECRET_NAME)
 
 
 async def get_redis():

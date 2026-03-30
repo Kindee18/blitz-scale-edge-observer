@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD022 MD031 MD032 MD036 MD040 MD060 -->
+
 # Blitz-Scale Edge Observer
 
 > **FantasyPros Showcase Project** — Real-time fantasy sports scoring at sub-100ms global latency with 93% cost reduction.
@@ -584,6 +586,22 @@ Validated through 100x traffic spike testing (10,000 concurrent users).
 |---------|----------|-------------|---------|
 | Baseline | $45/day | $3.15/day | **93%** |
 | 100x Peak | $900/day | $63/day | **93%** |
+
+### Evidence Traceability
+
+All performance and cost claims in this README are backed by reproducible artifacts:
+
+- Load and latency metrics: `tests/load/TEST_RESULTS.md`
+- k6 test harnesses: `tests/load/k6_100x_spike_test.js`, `tests/load/k6_fantasypros_patterns.js`, `tests/load/k6_load_test.js`
+- Operational failure and rollback procedures: `docs/RUNBOOK.md`
+- Cost model assumptions: `docs/COST_MODEL.md`, `logging/finops_logging_strategy.md`
+
+Recommended verification flow before releases:
+
+1. Run `make test-load` and archive raw outputs under `tests/load/`.
+2. Execute predictive scaler dry-run (`make demo-scaling`) and one controlled real-mode invocation in staging.
+3. Validate CloudWatch dashboard panels and alarm states in `monitoring/cloudwatch_dashboard.json`.
+4. Update `tests/load/TEST_RESULTS.md` and this README summary numbers only from fresh artifacts.
 
 ---
 

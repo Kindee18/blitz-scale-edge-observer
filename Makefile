@@ -18,6 +18,8 @@ help:
 	@echo "  make demo-scaling      - Run predictive scaling in dry-run mode"
 	@echo "  make demo-client       - Start fantasy client simulator"
 	@echo "  make demo-inject       - Inject test fantasy events"
+	@echo "  make validate-scaler-dryrun - Validate predictive scaler in dry-run mode"
+	@echo "  make validate-scaler-live   - Validate predictive scaler in live mode (staging only)"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test-all          - Run all test suites"
@@ -79,6 +81,15 @@ demo-client:
 demo-inject:
 	@echo "🎯 Injecting test fantasy events..."
 	python scripts/inject_test_events.py --count 10 --game-id NFL_101
+
+validate-scaler-dryrun:
+	@echo "🔍 Validating predictive scaler (dry-run)..."
+	DRY_RUN_MODE=true python3 scaling/scheduled_scaler_lambda.py
+
+validate-scaler-live:
+	@echo "⚠️  Validating predictive scaler (live mode)"
+	@test "$${CONFIRM_LIVE}" = "yes" || (echo "Set CONFIRM_LIVE=yes to run live validation" && exit 1)
+	DRY_RUN_MODE=false python3 scaling/scheduled_scaler_lambda.py
 
 # ==========================================
 # Testing Targets

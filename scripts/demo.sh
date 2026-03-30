@@ -177,6 +177,13 @@ inject_secrets() {
     # Store in AWS Secrets Manager
     if aws secretsmanager describe-secret --secret-id blitz-edge-webhook-token &> /dev/null; then
         log_info "Webhook secret already exists in Secrets Manager"
+        WEBHOOK_SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id blitz-edge-webhook-token \
+            --query SecretString --output text 2>/dev/null || echo "")
+        if [[ -z "${WEBHOOK_SECRET}" ]]; then
+            log_error "Failed to read existing webhook secret from Secrets Manager"
+            return 1
+        fi
     else
         log_info "Creating webhook secret in Secrets Manager..."
         aws secretsmanager create-secret \

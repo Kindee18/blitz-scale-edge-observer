@@ -16,4 +16,5 @@ tag = "v1"
 new_classes = ["GameTrackerDO"]
 
 [vars]
-WEBHOOK_SECRET_TOKEN = "secure-edge-token-12345"
+# Keep non-sensitive runtime config here only.
+# WEBHOOK_SECRET_TOKEN must be provisioned via `wrangler secret put WEBHOOK_SECRET_TOKEN`.
