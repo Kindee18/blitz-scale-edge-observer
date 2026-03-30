@@ -3,6 +3,7 @@
 # Blitz-Scale Edge Observer - Operational Runbook
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [Game-Day Playbook](#game-day-playbook)
 3. [Deployment Procedures](#deployment-procedures)
@@ -19,6 +20,7 @@
 This runbook covers operational procedures for the Blitz-Scale Edge Observer infrastructure, designed to handle real-time fantasy sports scoring updates for FantasyPros Game Day.
 
 **Key Components:**
+
 - **Predictive Scaler:** EKS pre-warming for NFL Sunday spikes
 - **Delta Processor:** Kinesis → Lambda → Fantasy points calculation
 - **Edge Worker:** Cloudflare WebSocket broadcasting
@@ -211,6 +213,7 @@ make invoke-scaler
 ### Issue: Predictive Scaler Lock Contention
 
 **Resolution:** Normal behavior - only one scaler runs per window. Check for stuck locks:
+
 ```bash
 aws dynamodb scan --table-name blitz-scaling-locks
 ```
@@ -224,6 +227,7 @@ aws dynamodb scan --table-name blitz-scaling-locks
 **Impact:** Delta Processor falls back to DynamoDB, ~50ms additional latency
 
 **Detection:**
+
 ```bash
 # Check Redis CloudWatch metrics
 aws cloudwatch get-metric-statistics \
@@ -241,6 +245,7 @@ aws logs filter-log-events \
 ```
 
 **Response:**
+
 ```bash
 # 1. Verify automatic failover to replica
 aws elasticache describe-cache-clusters \
@@ -268,6 +273,7 @@ watch -n 10 'aws elasticache describe-events --source-identifier blitz-redis --m
 **Impact:** Increased latency in fantasy updates, potential data backlog
 
 **Detection:**
+
 ```bash
 # Check Kinesis iterator age (ms behind realtime)
 aws cloudwatch get-metric-statistics \
@@ -290,6 +296,7 @@ aws cloudwatch get-metric-statistics \
 ```
 
 **Response:**
+
 ```bash
 # 1. Increase Kinesis shard count for parallel processing
 aws kinesis update-shard-count \
@@ -322,6 +329,7 @@ watch -n 5 'aws cloudwatch get-metric-statistics \
 **Impact:** Initial WebSocket connections delayed 2-5 seconds, KV cache miss
 
 **Detection:**
+
 ```bash
 # Check Worker CPU time (cold starts show higher initial values)
 wrangler tail --format=json | jq 'select(.cpuTime > 50)'
@@ -331,6 +339,7 @@ wrangler tail --format=json | jq 'select(.cpuTime > 50)'
 ```
 
 **Response:**
+
 ```bash
 # 1. Implement warming ping (automated via cron)
 curl -s https://api.blitz-obs.com/health > /dev/null
@@ -349,7 +358,8 @@ wrangler kv:namespace list
 wrangler deploy --env staging  # Deploy staging as emergency fallback
 ```
 
-**Prevention:** 
+**Prevention:**
+
 - Schedule warming requests every 5 minutes during game hours
 - Use Durable Objects hibernation API for session persistence
 - Deploy to multiple edge locations
@@ -361,6 +371,7 @@ wrangler deploy --env staging  # Deploy staging as emergency fallback
 **Impact:** Lambda functions unable to scale, increased processing latency
 
 **Response:**
+
 ```bash
 # Emergency scale-up
 aws eks update-nodegroup-config \
@@ -399,6 +410,7 @@ EOF
 ### Scenario: Kinesis Throttling
 
 **Response:**
+
 ```bash
 # Scale shards immediately
 aws kinesis update-shard-count \
@@ -493,12 +505,12 @@ aws ce get-cost-and-usage \
 
 ### Cost Thresholds
 
-| Service | Threshold | Action |
-|---------|-----------|--------|
-| CloudWatch Logs | $100/day | Review FinOps filter |
-| Kinesis | $200/day | Reduce retention |
-| Lambda | $150/day | Optimize settings |
-| EKS | $500/day | Review utilization |
+| Service         | Threshold | Action               |
+| --------------- | --------- | -------------------- |
+| CloudWatch Logs | $100/day  | Review FinOps filter |
+| Kinesis         | $200/day  | Reduce retention     |
+| Lambda          | $150/day  | Optimize settings    |
+| EKS             | $500/day  | Review utilization   |
 
 ---
 
@@ -511,4 +523,4 @@ aws ce get-cost-and-usage \
 
 ---
 
-*Version 1.1.0 | Maintained by Platform Engineering*
+_Version 1.1.0 | Maintained by Platform Engineering_

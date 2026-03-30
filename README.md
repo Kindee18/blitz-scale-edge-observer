@@ -5,6 +5,7 @@
 > **FantasyPros Showcase Project** — Real-time fantasy sports scoring at sub-100ms global latency with 93% cost reduction.
 
 **Key Results:**
+
 - ⚡ Sub-100ms fantasy score updates globally
 - 🔋 93% reduction in mobile battery drain (eliminating polling)
 - 💰 93% cloud cost reduction via intelligent log filtering
@@ -55,21 +56,27 @@ graph TD
 ## 🏗️ Core Engineering Methodologies
 
 ### 1. Predictive Auto-Scaling (The Pre-Warm Strategy)
+
 Instead of relying on reactive Metrics (CPU/Memory that takes 2-5 minutes to spin up nodes), we created a schedule-aware Python script. It analyzes the JSON game schedule and triggers Karpenter upscaling 30 minutes before kickoff, ensuring nodes are warm, network interfaces are attached, and images are pulled ahead of the NFL Sunday traffic spike.
 
 ### 2. Edge-Push Real-Time Delta Pipeline
+
 Replaced inefficient HTTP polling from clients with a low-latency Event-Driven push architecture.
+
 1. The **Delta Processor Lambda** ingests raw kinesis events, queries the latest state from Redis, and extracts only the changed scalar values (`delta`).
 2. It pushes this tiny payload (e.g., 50 bytes instead of 500 KB) to our Cloudflare edge webhook.
 3. The Edge worker broadcasts this to all connected **WebSockets** within a given geographic region dynamically resolving latency bottlenecks.
 
 ### 3. Ultimate Caching Layer
+
 Cloudflare KV acts as an eventually-consistent global registry. When late-joining clients instantiate their WebSocket connection, they don't query the origin DB. Instead, the Worker issues a KV read, instantly syncing them on connection in single-digit milliseconds globally.
 
 ### 4. FinOps Logging Pattern
+
 To counter massive ingest bills from full-scale diagnostic streaming during prime hours, `log_filter_lambda.py` intercepts CloudWatch batches via Subscription Filters. It discards nominal event heartbeats and passes errors/critical exceptions onto a cheap deep-storage AWS S3 bucket. Expected cost reduction: up to 93% on ingestion.
 
 ## 📁 Repository Structure
+
 ```
 blitz-scale-edge-observer/
 ├── terraform/                # Infrastructure as code modules
@@ -81,7 +88,7 @@ blitz-scale-edge-observer/
 │   ├── eks_auth.py           # EKS token authentication for Lambda
 │   ├── predictive_scaling.py # Auto-scaling cron/daemon
 │   ├── scheduled_scaler_lambda.py  # Lambda handler with DynamoDB lock
-│   └── schedule.json         # Mock game schedule 
+│   └── schedule.json         # Mock game schedule
 ├── streaming/
 │   ├── delta_processor_lambda.py # Core realtime data cruncher with fantasy scoring
 │   ├── fantasy_scoring.py    # Fantasy points calculator (PPR/Half-PPR/Standard)
@@ -89,8 +96,8 @@ blitz-scale-edge-observer/
 │   └── client_sim.py         # Basic WebSocket client simulator
 ├── edge/
 │   ├── worker.js             # Cloudflare Edge Worker with Durable Objects
-│   ├── wrangler.toml         # Cloudflare Deployment 
-│   └── latency_optimization_strategy.md 
+│   ├── wrangler.toml         # Cloudflare Deployment
+│   └── latency_optimization_strategy.md
 ├── logging/
 │   ├── log_filter_lambda.py  # FinOps Filter
 │   └── finops_logging_strategy.md
@@ -154,12 +161,14 @@ make run-demo
 #### **A. Predictive Scaling (EKS Pre-Warming)**
 
 **Local Testing (Dry Run):**
+
 ```bash
 # Test without making real changes
 DRY_RUN_MODE=true python3 scaling/scheduled_scaler_lambda.py
 ```
 
 **Deploy Lambda:**
+
 ```bash
 # Deploy via Terraform
 cd terraform/eks
@@ -171,6 +180,7 @@ make invoke-scaler
 ```
 
 **Monitor Scaling:**
+
 ```bash
 # View real-time logs
 make logs-scaler
@@ -189,6 +199,7 @@ aws cloudwatch get-metric-statistics \
 ```
 
 **Configuration (Environment Variables):**
+
 ```bash
 export EKS_CLUSTER_NAME=blitz-edge-cluster
 export AWS_REGION=us-east-1
@@ -203,6 +214,7 @@ export LOCK_TTL_SECONDS=300
 #### **B. Delta Processor (Real-Time Fantasy Scoring)**
 
 **Local Testing:**
+
 ```bash
 # Test with mock Kinesis event
 cd streaming
@@ -223,12 +235,14 @@ print(json.dumps(result, indent=2))
 ```
 
 **Deploy Lambda:**
+
 ```bash
 cd terraform/kinesis
 terraform apply -target=aws_lambda_function.delta_processor
 ```
 
 **Inject Test Events:**
+
 ```bash
 # Inject single event
 ./scripts/inject_test_event.sh NFL_101 MAHOMES_15 "Patrick Mahomes"
@@ -238,6 +252,7 @@ python3 scripts/inject_test_events.py --count 10 --game-id NFL_101
 ```
 
 **View Logs:**
+
 ```bash
 make logs-processor
 
@@ -248,6 +263,7 @@ aws logs filter-log-events \
 ```
 
 **Configuration:**
+
 ```bash
 export STATE_TABLE_NAME=blitz-game-state-versions
 export REDIS_URL=redis://localhost:6379
@@ -260,6 +276,7 @@ export AWS_REGION=us-east-1
 #### **C. Fantasy Scoring Calculator**
 
 **Standalone Usage:**
+
 ```python
 from streaming.fantasy_scoring import calculate_fantasy_points, calculate_fantasy_delta
 
@@ -286,6 +303,7 @@ print(f"Points Delta: +{delta['points_delta']}")  # Output: +4.8
 #### **D. Cloudflare Edge Worker**
 
 **Local Development:**
+
 ```bash
 cd edge
 
@@ -300,6 +318,7 @@ curl http://localhost:8787/health
 ```
 
 **Deploy to Cloudflare:**
+
 ```bash
 cd edge
 
@@ -314,6 +333,7 @@ make deploy-edge
 ```
 
 **Test WebSocket:**
+
 ```bash
 # Install wscat
 npm install -g wscat
@@ -326,6 +346,7 @@ wscat -c "wss://api.blitz-obs.com/realtime?game_id=NFL_101&client_id=test"
 ```
 
 **View Worker Logs:**
+
 ```bash
 npx wrangler tail
 ```
@@ -335,6 +356,7 @@ npx wrangler tail
 #### **E. Fantasy Client Simulator**
 
 **Basic Usage:**
+
 ```bash
 # Run fantasy client with default settings
 python3 streaming/fantasy_client_sim.py
@@ -373,6 +395,7 @@ k6 run tests/load/k6_load_test.js \
 #### **G. Monitoring & CloudWatch Dashboard**
 
 **Deploy Dashboard:**
+
 ```bash
 # Via Terraform (included in scheduled_scaler.tf)
 cd terraform/eks
@@ -380,12 +403,14 @@ terraform apply -target=aws_cloudwatch_dashboard.main
 ```
 
 **View Dashboard:**
+
 ```bash
 # Open in browser
 aws cloudwatch get-dashboard --dashboard-name blitz-scale-edge-observer
 ```
 
 **Custom Metrics (from Lambda):**
+
 ```python
 from monitoring.custom_metrics import DeltaProcessorMetrics
 
@@ -451,25 +476,26 @@ make setup             # Install dependencies
 
 #### **Required AWS Resources**
 
-| Resource | Purpose | Creation |
-|----------|---------|----------|
-| EKS Cluster | Kubernetes for Lambda compute | `terraform/eks/main.tf` |
-| Kinesis Stream | Real-time data ingestion | `terraform/kinesis/` |
-| DynamoDB Table | Idempotency locks | Auto-created by Terraform |
-| S3 Bucket | Schedule storage | Auto-created by Terraform |
-| Secrets Manager | Webhook token | `aws secretsmanager create-secret` |
+| Resource        | Purpose                       | Creation                           |
+| --------------- | ----------------------------- | ---------------------------------- |
+| EKS Cluster     | Kubernetes for Lambda compute | `terraform/eks/main.tf`            |
+| Kinesis Stream  | Real-time data ingestion      | `terraform/kinesis/`               |
+| DynamoDB Table  | Idempotency locks             | Auto-created by Terraform          |
+| S3 Bucket       | Schedule storage              | Auto-created by Terraform          |
+| Secrets Manager | Webhook token                 | `aws secretsmanager create-secret` |
 
 #### **Required Cloudflare Resources**
 
-| Resource | Purpose | Creation |
-|----------|---------|----------|
-| Worker | WebSocket hub | `wrangler deploy` |
-| KV Namespace | State cache | `wrangler kv:namespace create` |
-| Durable Objects | Session management | Auto-created by Worker |
+| Resource        | Purpose            | Creation                       |
+| --------------- | ------------------ | ------------------------------ |
+| Worker          | WebSocket hub      | `wrangler deploy`              |
+| KV Namespace    | State cache        | `wrangler kv:namespace create` |
+| Durable Objects | Session management | Auto-created by Worker         |
 
 #### **Environment Variables**
 
 **Predictive Scaler:**
+
 ```bash
 EKS_CLUSTER_NAME=blitz-edge-cluster
 AWS_REGION=us-east-1
@@ -481,6 +507,7 @@ WEBHOOK_SECRET_TOKEN=your-secret-here
 ```
 
 **Delta Processor:**
+
 ```bash
 STATE_TABLE_NAME=blitz-game-state-versions
 REDIS_URL=redis://your-redis-endpoint:6379
@@ -493,6 +520,7 @@ AWS_REGION=us-east-1
 ### 5. Troubleshooting
 
 **Issue: Lambda fails with "Unable to import module"**
+
 ```bash
 # Rebuild Lambda package with dependencies
 cd terraform/eks
@@ -501,6 +529,7 @@ terraform apply -target=aws_lambda_function.scheduled_scaler
 ```
 
 **Issue: WebSocket connections fail**
+
 ```bash
 # Check Cloudflare Worker logs
 npx wrangler tail
@@ -510,6 +539,7 @@ aws secretsmanager get-secret-value --secret-id blitz-edge-webhook-token
 ```
 
 **Issue: High latency in delta processing**
+
 ```bash
 # Check Redis connection
 redis-cli -u $REDIS_URL ping
@@ -522,6 +552,7 @@ aws cloudwatch get-metric-statistics \
 ```
 
 **Issue: Terraform lock contention**
+
 ```bash
 # Release stuck Terraform lock
 terraform force-unlock <LOCK_ID>
@@ -533,15 +564,16 @@ terraform force-unlock <LOCK_ID>
 
 **GitHub Actions Workflow:**
 
-| Stage | Trigger | Action |
-|-------|---------|--------|
-| Quality Gate | PR/Push | Lint, Security Scan (tfsec, Checkov) |
-| Test Gate | Quality pass | Unit tests, Coverage report |
-| Terraform Plan | Test pass | Plan with PR comment |
-| Staging Deploy | Merge to develop | Auto-deploy to staging |
-| Production Deploy | Merge to main | Approval gate, then deploy |
+| Stage             | Trigger          | Action                               |
+| ----------------- | ---------------- | ------------------------------------ |
+| Quality Gate      | PR/Push          | Lint, Security Scan (tfsec, Checkov) |
+| Test Gate         | Quality pass     | Unit tests, Coverage report          |
+| Terraform Plan    | Test pass        | Plan with PR comment                 |
+| Staging Deploy    | Merge to develop | Auto-deploy to staging               |
+| Production Deploy | Merge to main    | Approval gate, then deploy           |
 
 **Manual Deployment:**
+
 ```bash
 # Via GitHub CLI
 gh workflow run "Blitz-Edge-Production-Pipeline" \
@@ -557,24 +589,24 @@ Validated through 100x traffic spike testing (10,000 concurrent users).
 
 ### Performance at Scale
 
-| Metric | Target | Achieved | Status |
-|--------|--------|----------|--------|
-| **p99 Latency** | <100ms | **87ms** | ✅ |
-| **Mean Latency** | - | **42ms** | ✅ |
-| **Success Rate** | >99% | **99.7%** | ✅ |
-| **100x Spike Handling** | 10,000 users | **10,000 users** | ✅ |
+| Metric                  | Target       | Achieved         | Status |
+| ----------------------- | ------------ | ---------------- | ------ |
+| **p99 Latency**         | <100ms       | **87ms**         | ✅     |
+| **Mean Latency**        | -            | **42ms**         | ✅     |
+| **Success Rate**        | >99%         | **99.7%**        | ✅     |
+| **100x Spike Handling** | 10,000 users | **10,000 users** | ✅     |
 
 ### Infrastructure Cost Per NFL Sunday
 
-| Component | Baseline | Peak (100x) | Total |
-|-----------|----------|-------------|-------|
-| EKS (Karpenter) | $180 | $420 | $600 |
-| Lambda | $45 | $340 | $385 |
-| Kinesis | $80 | $240 | $320 |
-| Cloudflare Workers | $25 | $85 | $110 |
-| CloudWatch (filtered) | $15 | $63 | $78 |
-| Redis | $120 | $120 | $120 |
-| **Total** | **$465** | **$1,268** | **$1,613** |
+| Component             | Baseline | Peak (100x) | Total      |
+| --------------------- | -------- | ----------- | ---------- |
+| EKS (Karpenter)       | $180     | $420        | $600       |
+| Lambda                | $45      | $340        | $385       |
+| Kinesis               | $80      | $240        | $320       |
+| Cloudflare Workers    | $25      | $85         | $110       |
+| CloudWatch (filtered) | $15      | $63         | $78        |
+| Redis                 | $120     | $120        | $120       |
+| **Total**             | **$465** | **$1,268**  | **$1,613** |
 
 **Without predictive scaling:** ~$3,200 per NFL Sunday (reactive over-provisioning)
 
@@ -582,10 +614,10 @@ Validated through 100x traffic spike testing (10,000 concurrent users).
 
 ### FinOps Log Filtering
 
-| Traffic | Raw Logs | With Filter | Savings |
-|---------|----------|-------------|---------|
-| Baseline | $45/day | $3.15/day | **93%** |
-| 100x Peak | $900/day | $63/day | **93%** |
+| Traffic   | Raw Logs | With Filter | Savings |
+| --------- | -------- | ----------- | ------- |
+| Baseline  | $45/day  | $3.15/day   | **93%** |
+| 100x Peak | $900/day | $63/day     | **93%** |
 
 ### Evidence Traceability
 
@@ -606,6 +638,10 @@ Recommended verification flow before releases:
 ---
 
 ## �📌 Releases
+
 Latest Stable Version: **v1.0.0**
 For detailed changes, see the [Release Notes](docs/RELEASE_NOTES.md).
+
+```
+
 ```
