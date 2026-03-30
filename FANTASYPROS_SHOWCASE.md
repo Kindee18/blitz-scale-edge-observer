@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD022 MD031 MD032 MD040 MD060 -->
+
 # FantasyPros Showcase: Blitz-Scale Edge Observer
 
 ## Executive Summary
@@ -413,7 +415,7 @@ nba_scoring = FantasyScoringCalculator(
 
 - **Architecture Repository:** [github.com/fantasypros/blitz-scale-edge-observer](https://github.com/fantasypros/blitz-scale-edge-observer)
 - **Demo Environment:** [demo.blitz-scale.fantasypros.com](https://demo.blitz-scale.fantasypros.com)
-- **Technical Lead:** platform-team@fantasypros.com
+- **Technical Lead:** [platform-team@fantasypros.com](mailto:platform-team@fantasypros.com)
 
 ---
 
