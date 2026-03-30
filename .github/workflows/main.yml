@@ -2,21 +2,21 @@ name: Blitz-Edge-Production-Pipeline
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Target environment'
+        description: "Target environment"
         required: true
-        default: 'staging'
+        default: "staging"
         type: choice
         options:
           - staging
           - production
       auto_approve:
-        description: 'Auto-approve Terraform apply?'
+        description: "Auto-approve Terraform apply?"
         required: false
         default: false
         type: boolean
@@ -29,7 +29,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  PYTHON_VERSION: '3.11'
+  PYTHON_VERSION: "3.11"
 
 jobs:
   # ============================================
@@ -223,8 +223,8 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
-          workingDirectory: 'edge'
-          environment: 'staging'
+          workingDirectory: "edge"
+          environment: "staging"
 
       - name: Smoke Test Staging
         run: |
@@ -264,8 +264,8 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
-          workingDirectory: 'edge'
-          environment: 'production'
+          workingDirectory: "edge"
+          environment: "production"
 
       - name: Post-Deploy Smoke Test
         run: |
@@ -277,6 +277,6 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: 'Production deployment ${{ job.status }}'
+          text: "Production deployment ${{ job.status }}"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
