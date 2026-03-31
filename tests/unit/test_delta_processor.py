@@ -24,10 +24,12 @@ async def test_compute_deltas_batched_no_previous_state():
     mock_redis = MagicMock()
     mock_pipe = MagicMock()
     mock_redis.pipeline.return_value = mock_pipe
-    mock_pipe.execute = AsyncMock(side_effect=[
-        [None, None],  # Initial MGET results
-        ["OK", "OK"],  # MSET results
-    ])
+    mock_pipe.execute = AsyncMock(
+        side_effect=[
+            [None, None],  # Initial MGET results
+            ["OK", "OK"],  # MSET results
+        ]
+    )
 
     records = [
         {"game_id": "G1", "player_id": "P1", "stats": {"score": 10}, "timestamp": 123},
@@ -49,10 +51,12 @@ async def test_compute_deltas_batched_with_partial_change():
     mock_redis.pipeline.return_value = mock_pipe
     old_state = json.dumps({"stats": {"score": 10, "yards": 50}})
 
-    mock_pipe.execute = AsyncMock(side_effect=[
-        [old_state],  # Initial MGET
-        ["OK"],  # MSET
-    ])
+    mock_pipe.execute = AsyncMock(
+        side_effect=[
+            [old_state],  # Initial MGET
+            ["OK"],  # MSET
+        ]
+    )
 
     records = [
         {
@@ -78,10 +82,12 @@ async def test_compute_deltas_batched_no_change():
     mock_redis.pipeline.return_value = mock_pipe
     old_state = json.dumps({"stats": {"score": 10}})
 
-    mock_pipe.execute = AsyncMock(side_effect=[
-        [old_state],  # Initial MGET
-        [],  # No MSET expected
-    ])
+    mock_pipe.execute = AsyncMock(
+        side_effect=[
+            [old_state],  # Initial MGET
+            [],  # No MSET expected
+        ]
+    )
 
     records = [
         {"game_id": "G1", "player_id": "P1", "stats": {"score": 10}, "timestamp": 126}

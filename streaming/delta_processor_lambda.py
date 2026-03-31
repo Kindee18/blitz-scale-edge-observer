@@ -265,7 +265,9 @@ async def push_to_edge(deltas):
         return True
 
     if _circuit_is_open():
-        logger.warning("Edge circuit breaker is open. Skipping push to protect downstream.")
+        logger.warning(
+            "Edge circuit breaker is open. Skipping push to protect downstream."
+        )
         publish_metric("EdgePushSkippedCircuitOpen", len(deltas), "Count")
         return False
 
@@ -302,7 +304,9 @@ def _build_fallback_delta(record, old_stats):
         return None
 
     try:
-        previous_points = float(old_stats.get("fantasy_points", 0) if isinstance(old_stats, dict) else 0)
+        previous_points = float(
+            old_stats.get("fantasy_points", 0) if isinstance(old_stats, dict) else 0
+        )
         current_points = float(projected_points)
     except Exception:
         return None
@@ -365,7 +369,10 @@ async def compute_deltas_batched(records, redis):
                     scoring_format,
                     sport=sport,
                 )
-                if fantasy_delta.get("significant_change") and projected_points is not None:
+                if (
+                    fantasy_delta.get("significant_change")
+                    and projected_points is not None
+                ):
                     signal = generate_start_sit_signal(fantasy_delta, projected_points)
                     fantasy_delta["start_sit_signal"] = signal
             except Exception as exc:
@@ -404,7 +411,9 @@ async def compute_deltas_batched(records, redis):
                 else 0,
                 "cached_at": record.get("timestamp"),
             }
-            pipe.set(f"state:{game_id}:{player_id}", json.dumps(record_to_store), ex=3600)
+            pipe.set(
+                f"state:{game_id}:{player_id}", json.dumps(record_to_store), ex=3600
+            )
 
             if fantasy_delta and fantasy_delta.get("significant_change"):
                 publish_metric(

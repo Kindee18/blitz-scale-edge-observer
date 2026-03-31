@@ -51,12 +51,18 @@ def put_event(client, stream_name: str, event: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Inject fantasy test events")
-    parser.add_argument("--count", type=int, default=1, help="Number of events to inject")
+    parser.add_argument(
+        "--count", type=int, default=1, help="Number of events to inject"
+    )
     parser.add_argument("--game-id", default="NFL_101", help="Game ID partition key")
-    parser.add_argument("--stream", default="blitz-data-stream", help="Kinesis stream name")
+    parser.add_argument(
+        "--stream", default="blitz-data-stream", help="Kinesis stream name"
+    )
     args = parser.parse_args()
 
-    print(f"Injecting {args.count} test event(s) into {args.stream} for game {args.game_id}...")
+    print(
+        f"Injecting {args.count} test event(s) into {args.stream} for game {args.game_id}..."
+    )
 
     client = boto3.client("kinesis")
     sent = 0

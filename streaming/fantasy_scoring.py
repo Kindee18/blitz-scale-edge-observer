@@ -269,7 +269,9 @@ def _calculate_generic_sport_points(stats: Dict, sport: str) -> float:
     return round(total, 2)
 
 
-def _calculate_generic_sport_delta(old_stats: Dict, new_stats: Dict, sport: str) -> Dict:
+def _calculate_generic_sport_delta(
+    old_stats: Dict, new_stats: Dict, sport: str
+) -> Dict:
     previous_points = _calculate_generic_sport_points(old_stats, sport)
     current_points = _calculate_generic_sport_points(new_stats, sport)
     points_delta = round(current_points - previous_points, 2)

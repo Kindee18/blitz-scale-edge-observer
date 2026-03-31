@@ -203,7 +203,9 @@ class FantasyClientSimulator:
                 raise
             except Exception as e:
                 self.reconnect_attempts += 1
-                backoff = min(10, (2 ** min(self.reconnect_attempts, 5)) + random.uniform(0, 0.5))
+                backoff = min(
+                    10, (2 ** min(self.reconnect_attempts, 5)) + random.uniform(0, 0.5)
+                )
                 logger.error(
                     f"❌ Connection error: {e} | reconnect attempt {self.reconnect_attempts} in {backoff:.1f}s"
                 )
@@ -221,12 +223,16 @@ class FantasyClientSimulator:
                 latency = (time.time() * 1000) - server_ts
                 self.latency_history.append(latency)
                 self.update_count += 1
-                self.last_server_timestamp = max(self.last_server_timestamp, int(server_ts))
+                self.last_server_timestamp = max(
+                    self.last_server_timestamp, int(server_ts)
+                )
             else:
                 latency = 0
 
             if msg_type == "ping":
-                await websocket.send(json.dumps({"type": "pong", "timestamp": int(time.time() * 1000)}))
+                await websocket.send(
+                    json.dumps({"type": "pong", "timestamp": int(time.time() * 1000)})
+                )
                 return
 
             if msg_type == "initial_state":
