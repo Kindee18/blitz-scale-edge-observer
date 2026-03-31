@@ -8,6 +8,6 @@
     "test": "echo 'No tests defined' && exit 0"
   },
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.79.0"
   }
 }
