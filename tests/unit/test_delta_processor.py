@@ -22,12 +22,12 @@ from streaming.delta_processor_lambda import compute_deltas_batched  # noqa: E40
 async def test_compute_deltas_batched_no_previous_state():
     """Test delta calculation when no state exists in Redis (Full sync expected)."""
     mock_redis = MagicMock()
-    mock_pipe = AsyncMock()
+    mock_pipe = MagicMock()
     mock_redis.pipeline.return_value = mock_pipe
-    mock_pipe.execute.side_effect = [
+    mock_pipe.execute = AsyncMock(side_effect=[
         [None, None],  # Initial MGET results
         ["OK", "OK"],  # MSET results
-    ]
+    ])
 
     records = [
         {"game_id": "G1", "player_id": "P1", "stats": {"score": 10}, "timestamp": 123},
@@ -45,14 +45,14 @@ async def test_compute_deltas_batched_no_previous_state():
 async def test_compute_deltas_batched_with_partial_change():
     """Test delta calculation when stats have partially changed."""
     mock_redis = MagicMock()
-    mock_pipe = AsyncMock()
+    mock_pipe = MagicMock()
     mock_redis.pipeline.return_value = mock_pipe
     old_state = json.dumps({"stats": {"score": 10, "yards": 50}})
 
-    mock_pipe.execute.side_effect = [
+    mock_pipe.execute = AsyncMock(side_effect=[
         [old_state],  # Initial MGET
         ["OK"],  # MSET
-    ]
+    ])
 
     records = [
         {
@@ -74,14 +74,14 @@ async def test_compute_deltas_batched_with_partial_change():
 async def test_compute_deltas_batched_no_change():
     """Test delta calculation when no stats have changed."""
     mock_redis = MagicMock()
-    mock_pipe = AsyncMock()
+    mock_pipe = MagicMock()
     mock_redis.pipeline.return_value = mock_pipe
     old_state = json.dumps({"stats": {"score": 10}})
 
-    mock_pipe.execute.side_effect = [
+    mock_pipe.execute = AsyncMock(side_effect=[
         [old_state],  # Initial MGET
         [],  # No MSET expected
-    ]
+    ])
 
     records = [
         {"game_id": "G1", "player_id": "P1", "stats": {"score": 10}, "timestamp": 126}

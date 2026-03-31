@@ -1,7 +1,7 @@
 # Blitz-Scale Edge Observer - Makefile
 # One-command operations for deployment, demo, and testing
 
-.PHONY: help deploy-backend deploy-edge run-demo test-all test-unit test-load clean lint format
+.PHONY: help deploy-backend deploy-edge run-demo test-all test-unit test-load clean lint format setup bootstrap preflight preflight-ci
 
 # Default target
 help:
@@ -30,7 +30,10 @@ help:
 	@echo "Operations:"
 	@echo "  make format            - Format code (Ruff)"
 	@echo "  make clean             - Clean up local artifacts"
-	@echo "  make setup             - Initial setup (install dependencies)"
+	@echo "  make setup             - Alias for bootstrap"
+	@echo "  make bootstrap         - Install local dependencies and validate required tools"
+	@echo "  make preflight         - Validate local auth and deployment prerequisites"
+	@echo "  make preflight-ci      - Validate CI deployment prerequisites"
 	@echo ""
 
 # ==========================================
@@ -132,11 +135,16 @@ format:
 # ==========================================
 
 setup:
-	@echo "📦 Setting up development environment..."
-	pip install -r requirements.txt 2>/dev/null || pip install boto3 pydantic aioredis aiohttp kubernetes aws-xray-sdk \
-		opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-botocore websockets
-	cd edge && npm install 2>/dev/null || echo "⚠️  Node.js dependencies skipped"
-	@echo "✅ Setup complete"
+	bash scripts/bootstrap.sh
+
+bootstrap:
+	bash scripts/bootstrap.sh
+
+preflight:
+	bash scripts/preflight.sh
+
+preflight-ci:
+	bash scripts/preflight-ci.sh
 
 clean:
 	@echo "🧹 Cleaning up..."

@@ -93,6 +93,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Bash preflight (CI)
+        env:
+          CHECK_AWS_ROLE_ARN: "true"
+          CHECK_CF_API_TOKEN: "false"
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        run: bash scripts/preflight-ci.sh
+
       - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
@@ -139,6 +146,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Bash preflight (CI)
+        env:
+          CHECK_AWS_ROLE_ARN: "true"
+          CHECK_CF_API_TOKEN: "true"
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN_STAGING }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: bash scripts/preflight-ci.sh
 
       - name: Build Lambda layer artifact
         run: |
@@ -225,6 +240,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Bash preflight (CI)
+        env:
+          CHECK_AWS_ROLE_ARN: "true"
+          CHECK_CF_API_TOKEN: "true"
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: bash scripts/preflight-ci.sh
 
       - name: Build Lambda layer artifact
         run: |

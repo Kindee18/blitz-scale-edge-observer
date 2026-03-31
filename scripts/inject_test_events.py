@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Inject test fantasy events into Kinesis for local demos.
 
-This script mirrors scripts/inject_test_event.sh but supports the Makefile's
-CLI flags and handles AWS auth issues gracefully during smoke tests.
+Supports CLI flags used by Makefile targets and handles AWS auth
+issues gracefully during smoke tests.
 """
 
 import argparse

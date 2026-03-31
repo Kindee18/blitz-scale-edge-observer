@@ -3,7 +3,7 @@ main = "worker.js"
 compatibility_date = "2026-03-26"
 
 kv_namespaces = [
-  { binding = "GAME_STATE_KV", id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }
+  { binding = "GAME_STATE_KV", id = "24e9abb4d1e24822b38c5d1a1a50a657" }
 ]
 
 [durable_objects]

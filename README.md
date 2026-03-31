@@ -92,8 +92,7 @@ blitz-scale-edge-observer/
 ├── streaming/
 │   ├── delta_processor_lambda.py # Core realtime data cruncher with fantasy scoring
 │   ├── fantasy_scoring.py    # Fantasy points calculator (PPR/Half-PPR/Standard)
-│   ├── fantasy_client_sim.py # Fantasy roster simulator
-│   └── client_sim.py         # Basic WebSocket client simulator
+│   └── fantasy_client_sim.py # Fantasy roster simulator
 ├── edge/
 │   ├── worker.js             # Cloudflare Edge Worker with Durable Objects
 │   ├── wrangler.toml         # Cloudflare Deployment
@@ -107,7 +106,7 @@ blitz-scale-edge-observer/
 │   └── README.md             # Monitoring guide
 ├── scripts/
 │   ├── demo.sh               # One-command demo script
-│   └── inject_test_event.sh  # Test event injector
+│   └── inject_test_events.py # Test event injector (Python)
 ├── docs/
 │   ├── RUNBOOK.md            # Operational procedures
 │   ├── RELEASE_NOTES.md      # Release history
@@ -186,6 +185,167 @@ python3 --version
 # k6 (for load testing)
 k6 version
 ```
+
+### Automation and Credentials Guide (Bash-First)
+
+This repository now uses Bash entrypoints for setup and readiness checks.
+
+#### What is automated
+
+- `scripts/bootstrap.sh`: checks required tools and installs project dependencies.
+- `scripts/preflight.sh`: validates local prerequisites (AWS auth, Wrangler auth, and non-placeholder Cloudflare KV IDs).
+- `scripts/preflight-ci.sh`: validates CI prerequisites and required secrets for deployment jobs.
+- `Makefile` wiring for `setup`, `bootstrap`, `preflight`, and `preflight-ci` targets.
+- GitHub Actions preflight checks in terraform/deploy jobs.
+
+#### What is intentionally not automated
+
+- Interactive login commands such as `aws configure` and `wrangler login`.
+- Secret value creation/copy steps in cloud consoles.
+- Terraform deployment behavior changes (approval logic, apply strategy).
+- Runtime product logic outside setup/preflight automation entrypoints.
+
+### Get Credentials and Access
+
+Use this checklist to set up local and CI credentials safely.
+
+#### 1. AWS Local Credentials (for local preflight and manual ops)
+
+1. Go to AWS Console -> IAM -> Users -> select or create your user.
+1. Attach minimum policies you need (start with read-only plus specific deploy permissions).
+1. Open Security credentials -> Create access key.
+1. Copy Access key ID and Secret access key once.
+1. In PowerShell, run:
+
+```bash
+aws configure
+```
+
+1. Enter:
+
+- Access Key ID
+- Secret Access Key
+- Region: `us-east-1` (or your region)
+- Output: `json`
+
+1. Verify:
+
+```bash
+aws sts get-caller-identity
+```
+
+#### 2. AWS CI Credential Model (GitHub Actions)
+
+Your workflow expects role ARNs, so set up OIDC role assumption.
+
+1. In AWS IAM, create an Identity Provider:
+
+- Provider type: OpenID Connect
+- URL: `https://token.actions.githubusercontent.com`
+- Audience: `sts.amazonaws.com`
+
+1. Create IAM Role for GitHub Actions with trusted entity = Web identity.
+1. Set trust policy restrictions by repo and branch (`owner/repo` and refs).
+1. Attach deploy policies needed for Terraform/Lambda/EKS/etc.
+1. Copy role ARNs:
+
+- staging role ARN
+- production role ARN
+
+1. In GitHub repo -> Settings -> Secrets and variables -> Actions, add:
+
+- `AWS_ROLE_ARN_STAGING`
+- `AWS_ROLE_ARN`
+
+#### 3. Cloudflare Wrangler Login (local)
+
+1. Install Wrangler (already installed in this environment).
+1. In PowerShell, run:
+
+```bash
+wrangler login
+```
+
+1. Browser opens; authorize your account.
+1. Verify:
+
+```bash
+wrangler whoami
+```
+
+#### 4. Cloudflare API Token (for CI)
+
+1. Go to Cloudflare Dashboard -> My Profile -> API Tokens -> Create Token.
+1. Start from Edit Cloudflare Workers template.
+1. Scope minimally:
+
+- Account.Workers Scripts: Edit
+- Account.Workers KV Storage: Edit
+- Zone permissions only if needed by your deploy
+
+1. Restrict token to specific account/zone resources.
+1. Create token and copy it once.
+1. Add to GitHub Actions secrets as:
+
+- `CF_API_TOKEN`
+
+#### 5. Cloudflare KV Namespace IDs (for wrangler.toml)
+
+1. In Cloudflare Dashboard -> Workers and Pages -> KV.
+1. Create/select namespaces (preview and prod if applicable).
+1. Copy each namespace ID.
+1. Replace placeholder IDs in `edge/wrangler.toml`.
+
+Optional CLI method (after `wrangler login`):
+
+```bash
+wrangler kv namespace list
+```
+
+### Run the Automation Flow
+
+```bash
+# Install dependencies and verify required tools
+bash scripts/bootstrap.sh
+
+# Validate local machine readiness
+bash scripts/preflight.sh
+
+# Validate CI readiness logic locally
+bash scripts/preflight-ci.sh
+```
+
+If `make` is available in your environment, you can run:
+
+```bash
+make bootstrap
+make preflight
+make preflight-ci
+```
+
+### Final Verification Commands
+
+Run in repo root:
+
+```powershell
+aws sts get-caller-identity
+wrangler whoami
+bash scripts/preflight.sh
+bash scripts/preflight-ci.sh
+```
+
+### Required CI Secrets Summary
+
+- `AWS_ROLE_ARN_STAGING`: role assumed for staging deployment.
+- `AWS_ROLE_ARN`: role assumed for production deployment.
+- `CF_API_TOKEN`: Cloudflare token used by Wrangler action.
+
+### CI Preflight Behavior
+
+- `terraform-plan` checks for required runtime/tooling and `AWS_ROLE_ARN`.
+- `deploy-staging` checks for tooling, `AWS_ROLE_ARN_STAGING`, and `CF_API_TOKEN`.
+- `deploy-production` checks for tooling, `AWS_ROLE_ARN`, and `CF_API_TOKEN`.
+- All jobs fail fast if `edge/wrangler.toml` still has placeholder KV namespace IDs.
 
 ### 1. Quick Start (One Command)
 
@@ -286,8 +446,8 @@ terraform apply -target=aws_lambda_function.delta_processor
 **Inject Test Events:**
 
 ```bash
-# Inject single event
-./scripts/inject_test_event.sh NFL_101 MAHOMES_15 "Patrick Mahomes"
+# Inject one event
+python3 scripts/inject_test_events.py --count 1 --game-id NFL_101
 
 # Or use Python script with multiple events
 python3 scripts/inject_test_events.py --count 10 --game-id NFL_101
@@ -509,7 +669,10 @@ make invoke-scaler     # Manually trigger scaler
 make lint              # Run all linters
 make format            # Format code
 make clean             # Clean artifacts
-make setup             # Install dependencies
+make setup             # Alias for bootstrap
+make bootstrap         # Install dependencies + verify required tools
+make preflight         # Validate local auth and config prerequisites
+make preflight-ci      # Validate CI prerequisites
 ```
 
 ---
