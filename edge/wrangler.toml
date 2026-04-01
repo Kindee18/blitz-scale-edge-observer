@@ -12,8 +12,8 @@ bindings = [
 ]
 
 [[migrations]]
-tag = "v1"
-new_classes = ["GameTrackerDO"]
+tag = "v2"
+new_sqlite_classes = ["GameTrackerDO"]
 
 [vars]
 # Keep non-sensitive runtime config here only.
@@ -37,6 +37,10 @@ kv_namespaces = [
 bindings = [
   { name = "GAME_TRACKER_DO", class_name = "GameTrackerDO" }
 ]
+
+[[env.staging.migrations]]
+tag = "v2"
+new_sqlite_classes = ["GameTrackerDO"]
 
 [env.staging.vars]
 REQUIRE_JWT_AUTH = "false"
