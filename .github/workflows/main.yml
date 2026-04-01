@@ -126,7 +126,6 @@ jobs:
   terraform-plan:
     name: "📋 Terraform Plan"
     needs: test-gate
-    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     outputs:
       plan_exitcode: ${{ steps.plan.outputs.exitcode }}
@@ -221,7 +220,6 @@ jobs:
   deploy-staging:
     name: "🚀 Deploy to Staging"
     needs: terraform-plan
-    if: ${{ github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging') }}
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -290,7 +288,6 @@ jobs:
   deploy-production:
     name: "🚀 Deploy to Production"
     needs: [terraform-plan, deploy-staging]
-    if: ${{ (github.ref == 'refs/heads/main' && needs.terraform-plan.outputs.plan_exitcode != '1') || (github.event_name == 'workflow_dispatch' && inputs.environment == 'production' && inputs.auto_approve == true) }}
     runs-on: ubuntu-latest
     environment: production
     steps:
