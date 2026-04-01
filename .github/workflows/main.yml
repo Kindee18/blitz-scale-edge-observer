@@ -142,6 +142,11 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.6.0"
+
       - name: Bash preflight (CI)
         env:
           CHECK_AWS_ROLE_ARN: "true"
