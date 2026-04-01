@@ -360,7 +360,7 @@ jobs:
           echo "✅ Production deployment successful"
 
       - name: Notify Slack
-        if: always() && secrets.SLACK_WEBHOOK != ''
+        if: always() && env.SLACK_WEBHOOK_URL != ''
         continue-on-error: true
         uses: 8398a7/action-slack@v3
         with:
