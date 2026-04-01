@@ -45,6 +45,8 @@ resource "helm_release" "karpenter" {
 # NodePool CRD (Conceptual representation in Terraform for readability)
 # In reality, this would be applied via kubectl or a kubernetes_manifest resource
 resource "kubernetes_manifest" "karpenter_nodepool" {
+  count = 0
+
   manifest = {
     apiVersion = "karpenter.sh/v1beta1"
     kind       = "NodePool"
