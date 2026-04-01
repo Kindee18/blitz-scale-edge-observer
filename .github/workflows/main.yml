@@ -214,8 +214,8 @@ jobs:
           name: terraform-plan
           path: terraform/eks/tfplan
 
-      - name: Comment PR with Plan
-        if: github.event_name == 'pull_request' && steps.plan.outputs.exitcode != '1'
+      - name: Comment Commit with Plan
+        if: github.event_name == 'push' && steps.plan.outputs.exitcode != '1'
         uses: actions/github-script@v6
         with:
           script: |
@@ -224,10 +224,10 @@ jobs:
             Terraform plan completed successfully with no changes or additions.
             </details>
             *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            github.rest.repos.createCommitComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
+              commit_sha: context.sha,
               body: output
             })
 
