@@ -216,7 +216,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
-          path: terraform/eks/tfplan
+          path: |
+            terraform/eks/tfplan
+            terraform/eks/lambda_layer.zip
 
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request' && steps.plan.outputs.exitcode != '1'
@@ -264,21 +266,6 @@ jobs:
           AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: bash scripts/preflight-ci.sh
-
-      - name: Build Lambda layer artifact
-        run: |
-          rm -rf /tmp/lambda_layer
-          mkdir -p /tmp/lambda_layer/python
-          cd /tmp/lambda_layer
-          pip install --target=python \
-            boto3 kubernetes botocore urllib3 certifi charset-normalizer \
-            idna requests six python-dateutil pyyaml google-auth oauthlib \
-            requests-oauthlib --quiet
-          find python -name "*.pyc" -delete
-          find python -name "__pycache__" -type d -exec rm -rf {} +
-          find python -name "*.dist-info" -type d -exec rm -rf {} +
-          zip -r lambda_layer.zip python/ -q
-          mv lambda_layer.zip "${GITHUB_WORKSPACE}/terraform/eks/lambda_layer.zip"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -330,21 +317,6 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.6.0"
-
-      - name: Build Lambda layer artifact
-        run: |
-          rm -rf /tmp/lambda_layer
-          mkdir -p /tmp/lambda_layer/python
-          cd /tmp/lambda_layer
-          pip install --target=python \
-            boto3 kubernetes botocore urllib3 certifi charset-normalizer \
-            idna requests six python-dateutil pyyaml google-auth oauthlib \
-            requests-oauthlib --quiet
-          find python -name "*.pyc" -delete
-          find python -name "__pycache__" -type d -exec rm -rf {} +
-          find python -name "*.dist-info" -type d -exec rm -rf {} +
-          zip -r lambda_layer.zip python/ -q
-          mv lambda_layer.zip "${GITHUB_WORKSPACE}/terraform/eks/lambda_layer.zip"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
