@@ -179,7 +179,7 @@ jobs:
       - name: Terraform Init (EKS)
         run: |
           cd terraform/eks
-          terraform init || terraform init -backend=false
+          terraform init || terraform init -backend=false -reconfigure
 
       - name: Terraform Plan
         id: plan
