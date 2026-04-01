@@ -7,7 +7,14 @@ resource "aws_secretsmanager_secret" "edge_token" {
 
 resource "aws_secretsmanager_secret_version" "edge_token_v1" {
   secret_id     = aws_secretsmanager_secret.edge_token.id
-  secret_string = "secure-edge-token-12345"
+  secret_string = var.edge_webhook_secret_token
+}
+
+variable "edge_webhook_secret_token" {
+  description = "Webhook secret used between edge and processor; provide via tfvars or env var TF_VAR_edge_webhook_secret_token."
+  type        = string
+  sensitive   = true
+  default     = "REPLACE_WITH_SECURE_TOKEN"
 }
 
 resource "aws_secretsmanager_secret" "redis_auth" {
