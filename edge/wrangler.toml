@@ -3,7 +3,7 @@ main = "worker.js"
 compatibility_date = "2026-03-26"
 
 kv_namespaces = [
-  { binding = "GAME_STATE_KV", id = "24e9abb4d1e24822b38c5d1a1a50a657" }
+  { binding = "GAME_STATE_KV", id = "0247a560355744f7a6e2cf6d1e9b909d" }
 ]
 
 [durable_objects]
@@ -51,7 +51,7 @@ JWT_AUDIENCE = ""
 [env.production]
 name = "blitz-edge-observer"
 kv_namespaces = [
-  { binding = "GAME_STATE_KV", id = "24e9abb4d1e24822b38c5d1a1a50a657" }
+  { binding = "GAME_STATE_KV", id = "0247a560355744f7a6e2cf6d1e9b909d" }
 ]
 
 [env.production.durable_objects]
