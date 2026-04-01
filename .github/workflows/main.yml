@@ -237,7 +237,7 @@ jobs:
   deploy-staging:
     name: "🚀 Deploy to Staging"
     needs: terraform-plan
-    if: needs.terraform-plan.outputs.backend_ready == 'true'
+    if: github.ref == 'refs/heads/main' && needs.terraform-plan.outputs.backend_ready == 'true'
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -311,7 +311,7 @@ jobs:
   deploy-production:
     name: "🚀 Deploy to Production"
     needs: [terraform-plan, deploy-staging]
-    if: needs.terraform-plan.outputs.backend_ready == 'true'
+    if: github.ref == 'refs/heads/main' && needs.terraform-plan.outputs.backend_ready == 'true'
     runs-on: ubuntu-latest
     environment: production
     steps:
