@@ -126,6 +126,11 @@ resource "aws_iam_role_policy_attachment" "scheduled_scaler_attach" {
   policy_arn = aws_iam_policy.scheduled_scaler_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "scheduled_scaler_vpc_access" {
+  role       = aws_iam_role.scheduled_scaler_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 # CloudWatch EventBridge Rule for scheduling
 resource "aws_cloudwatch_event_rule" "scale_check_schedule" {
   name                = "blitz-predictive-scale-check"
@@ -194,7 +199,10 @@ resource "aws_lambda_function" "scheduled_scaler" {
     security_group_ids = length(aws_security_group.lambda_egress) > 0 ? [aws_security_group.lambda_egress[0].id] : []
   }
 
-  depends_on = [aws_iam_role_policy_attachment.scheduled_scaler_attach]
+  depends_on = [
+    aws_iam_role_policy_attachment.scheduled_scaler_attach,
+    aws_iam_role_policy_attachment.scheduled_scaler_vpc_access,
+  ]
 }
 
 # Security Group for Lambda VPC access
