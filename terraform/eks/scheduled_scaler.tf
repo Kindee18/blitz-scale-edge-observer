@@ -180,7 +180,6 @@ resource "aws_lambda_function" "scheduled_scaler" {
   environment {
     variables = {
       EKS_CLUSTER_NAME    = module.eks.cluster_name
-      AWS_REGION          = var.aws_region
       SCHEDULE_S3_BUCKET  = aws_s3_bucket.config_bucket.id
       SCHEDULE_S3_KEY     = "schedule.json"
       DYNAMODB_LOCK_TABLE = aws_dynamodb_table.scaling_locks.name
