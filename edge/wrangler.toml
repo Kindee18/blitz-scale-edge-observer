@@ -26,3 +26,20 @@ REQUIRE_JWT_AUTH = "false"
 WS_ROLLOUT_PERCENT = "100"
 JWT_ISSUER = ""
 JWT_AUDIENCE = ""
+
+[env.staging]
+name = "blitz-edge-observer-staging"
+kv_namespaces = [
+  { binding = "GAME_STATE_KV", id = "24e9abb4d1e24822b38c5d1a1a50a657" }
+]
+
+[env.staging.durable_objects]
+bindings = [
+  { name = "GAME_TRACKER_DO", class_name = "GameTrackerDO" }
+]
+
+[env.staging.vars]
+REQUIRE_JWT_AUTH = "false"
+WS_ROLLOUT_PERCENT = "100"
+JWT_ISSUER = ""
+JWT_AUDIENCE = ""
