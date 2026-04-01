@@ -30,7 +30,7 @@ JWT_AUDIENCE = ""
 [env.staging]
 name = "blitz-edge-observer-staging"
 kv_namespaces = [
-  { binding = "GAME_STATE_KV", id = "24e9abb4d1e24822b38c5d1a1a50a657" }
+  { binding = "GAME_STATE_KV", id = "fe24a0390c774c32a4a3585d1a5699ea" }
 ]
 
 [env.staging.durable_objects]
