@@ -219,6 +219,7 @@ jobs:
           path: |
             terraform/eks/tfplan
             terraform/eks/lambda_layer.zip
+            terraform/eks/scheduled_scaler.zip
 
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request' && steps.plan.outputs.exitcode != '1'
@@ -279,6 +280,9 @@ jobs:
           name: terraform-plan
           path: terraform/eks/
 
+      - name: Configure kubeconfig (Staging)
+        run: aws eks update-kubeconfig --name blitz-edge-cluster --region ${{ env.AWS_REGION }}
+
       - name: Terraform Apply (Staging)
         run: |
           cd terraform/eks
@@ -329,6 +333,9 @@ jobs:
         with:
           name: terraform-plan
           path: terraform/eks/
+
+      - name: Configure kubeconfig (Production)
+        run: aws eks update-kubeconfig --name blitz-edge-cluster --region ${{ env.AWS_REGION }}
 
       - name: Terraform Apply (Production)
         run: |
