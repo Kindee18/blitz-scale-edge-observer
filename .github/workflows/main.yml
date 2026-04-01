@@ -3,8 +3,6 @@ name: Blitz-Edge-Production-Pipeline
 on:
   push:
     branches: [main, master, develop]
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
     inputs:
       environment:
