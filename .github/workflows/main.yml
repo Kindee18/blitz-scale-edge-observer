@@ -343,7 +343,8 @@ jobs:
         run: |
           cd terraform/eks
           terraform init
-          terraform apply -lock-timeout=10m tfplan
+          terraform plan -lock-timeout=10m -out=tfplan-prod
+          terraform apply -lock-timeout=10m -auto-approve tfplan-prod
 
       - name: Deploy Worker (Production)
         uses: cloudflare/wrangler-action@v3
@@ -359,7 +360,8 @@ jobs:
           echo "✅ Production deployment successful"
 
       - name: Notify Slack
-        if: always()
+        if: always() && secrets.SLACK_WEBHOOK != ''
+        continue-on-error: true
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
