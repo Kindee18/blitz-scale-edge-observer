@@ -19,6 +19,10 @@ on:
         default: false
         type: boolean
 
+concurrency:
+  group: blitz-edge-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   id-token: write
   contents: read
@@ -198,7 +202,7 @@ jobs:
             exit 0
           fi
           set +e
-          terraform plan -out=tfplan -detailed-exitcode
+          terraform plan -lock-timeout=10m -out=tfplan -detailed-exitcode
           exitcode=$?
           set -e
           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
@@ -292,7 +296,7 @@ jobs:
         run: |
           cd terraform/eks
           terraform init
-          terraform apply -auto-approve tfplan
+          terraform apply -lock-timeout=10m -auto-approve tfplan
 
       - name: Deploy Worker (Staging)
         uses: cloudflare/wrangler-action@v3
@@ -358,7 +362,7 @@ jobs:
         run: |
           cd terraform/eks
           terraform init
-          terraform apply tfplan
+          terraform apply -lock-timeout=10m tfplan
 
       - name: Deploy Worker (Production)
         uses: cloudflare/wrangler-action@v3
