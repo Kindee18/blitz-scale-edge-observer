@@ -97,6 +97,20 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
         ]
         Effect   = "Allow"
         Resource = ["arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/blitz-game-state-*"]
+      },
+      {
+        Action = [
+          "kinesis:GetRecords",
+          "kinesis:GetShardIterator",
+          "kinesis:DescribeStream",
+          "kinesis:DescribeStreamSummary",
+          "kinesis:ListShards",
+          "kinesis:ListStreams"
+        ]
+        Effect = "Allow"
+        Resource = [
+          aws_kinesis_stream.fantasy_sports_stream.arn
+        ]
       }
     ]
   })
@@ -121,7 +135,7 @@ resource "aws_lambda_function" "delta_processor" {
     mode = "Active"
   }
 
-  # Dummy zip since the code is built via CI/CD
+  # Package current lambda source into a deployment zip during terraform apply.
   filename         = data.archive_file.delta_processor_dummy_zip.output_path
   source_code_hash = data.archive_file.delta_processor_dummy_zip.output_base64sha256
 
@@ -141,4 +155,7 @@ resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
   starting_position = "LATEST"
   batch_size        = 100
   maximum_retry_attempts = 2
+
+  # Avoid eventual-consistency races where mapping creation starts before role policy is attached.
+  depends_on = [aws_iam_role_policy.lambda_scoped_access]
 }
