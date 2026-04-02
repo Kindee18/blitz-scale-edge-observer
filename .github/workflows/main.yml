@@ -108,7 +108,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pytest pytest-asyncio aioredis boto3 pydantic kubernetes \
+          pip install pytest pytest-asyncio redis boto3 pydantic kubernetes \
             aws-xray-sdk opentelemetry-api opentelemetry-sdk \
             opentelemetry-instrumentation-botocore aiohttp pytest-cov
 
