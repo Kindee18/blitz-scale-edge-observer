@@ -290,7 +290,6 @@ jobs:
           pip install --target=python -r ../../requirements.txt --quiet
           find python -name "*.pyc" -delete
           find python -name "__pycache__" -type d -exec rm -rf {} +
-          find python -name "*.dist-info" -type d -exec rm -rf {} +
           zip -r lambda_layer.zip python/ -q
 
       - name: Terraform Apply (Shared Infra)
