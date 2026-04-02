@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "deploy_delta_processor_lambda" {
   description = "Whether to create the delta processor Lambda and event source mapping in this stack."
   type        = bool
-  default     = false
+  default     = true
 }
 
 resource "aws_kms_key" "blitz_key" {
@@ -104,8 +104,7 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
 
 data "archive_file" "delta_processor_dummy_zip" {
   type                    = "zip"
-  source_content          = "placeholder"
-  source_content_filename = "placeholder.txt"
+  source_file             = "${path.module}/../../streaming/delta_processor_lambda.py"
   output_path             = "${path.module}/.generated-delta-processor.zip"
 }
 
