@@ -187,7 +187,9 @@ def send_operational_alert(title, details):
 
 
 async def get_redis():
-    return redis_async.from_url(REDIS_URL, decode_responses=True)
+    client = redis_async.from_url(REDIS_URL, decode_responses=True)
+    await client.ping()
+    return client
 
 
 async def is_duplicate_event(redis, dedupe_key):
