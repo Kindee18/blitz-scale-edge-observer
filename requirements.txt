@@ -1,6 +1,6 @@
 boto3
 pydantic
-aioredis
+redis>=5.0.0
 aiohttp
 kubernetes
 aws-xray-sdk
