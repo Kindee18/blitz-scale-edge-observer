@@ -102,6 +102,13 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
   })
 }
 
+data "archive_file" "delta_processor_dummy_zip" {
+  type                    = "zip"
+  source_content          = "placeholder"
+  source_content_filename = "placeholder.txt"
+  output_path             = "${path.module}/.generated-delta-processor.zip"
+}
+
 # The Lambda function for delta processing
 resource "aws_lambda_function" "delta_processor" {
   count         = var.deploy_delta_processor_lambda ? 1 : 0
@@ -116,8 +123,8 @@ resource "aws_lambda_function" "delta_processor" {
   }
 
   # Dummy zip since the code is built via CI/CD
-  filename         = "dummy.zip"
-  source_code_hash = filebase64sha256("dummy.zip")
+  filename         = data.archive_file.delta_processor_dummy_zip.output_path
+  source_code_hash = data.archive_file.delta_processor_dummy_zip.output_base64sha256
 
   environment {
     variables = {
