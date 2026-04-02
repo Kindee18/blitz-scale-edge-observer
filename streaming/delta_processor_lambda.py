@@ -428,6 +428,59 @@ async def compute_deltas_batched(records, redis):
     return deltas
 
 
+async def compute_deltas_stateless(records):
+    """Compute deltas without Redis state when cache is unavailable."""
+    deltas = []
+
+    for record in records:
+        game_id = record["game_id"]
+        player_id = record["player_id"]
+        player_name = record.get("player_name", "")
+        new_stats = record.get("stats", {})
+        league_id = record.get("league_id")
+        user_id = record.get("user_id")
+        projected_points = record.get("projected_points")
+        scoring_format = record.get("scoring_format", "ppr")
+        sport = record.get("sport", "nfl")
+
+        fantasy_delta = None
+        if new_stats:
+            try:
+                fantasy_delta = calculate_fantasy_delta(
+                    {},
+                    new_stats,
+                    scoring_format,
+                    sport=sport,
+                )
+                if projected_points is not None:
+                    fantasy_delta["start_sit_signal"] = generate_start_sit_signal(
+                        fantasy_delta,
+                        projected_points,
+                    )
+            except Exception as exc:
+                logger.warning(f"Stateless fantasy calculation failed for {player_id}: {exc}")
+        else:
+            fantasy_delta = _build_fallback_delta(record, {})
+
+        deltas.append(
+            {
+                "game_id": game_id,
+                "player_id": player_id,
+                "player_name": player_name,
+                "timestamp": record.get("timestamp"),
+                "stat_delta": new_stats,
+                "fantasy_delta": fantasy_delta,
+                "is_full": True,
+                "league_id": league_id,
+                "user_id": user_id,
+                "scoring_format": scoring_format,
+                "sport": sport,
+            }
+        )
+
+    return deltas
+
+
 def _parse_kinesis_record(raw_record):
     payload = base64.b64decode(raw_record["kinesis"]["data"]).decode("utf-8")
     return json.loads(payload)
@@ -450,6 +503,7 @@ async def async_main(event):
     records_to_process = []
     malformed_count = 0
     duplicate_count = 0
+    degraded_mode = False
     seen = set()
     redis = None
 
@@ -493,25 +547,15 @@ async def async_main(event):
         }
 
     if redis is None:
+        degraded_mode = True
         send_operational_alert(
             "DeltaProcessor redis unavailable",
             {
                 "processed_candidates": len(records_to_process),
-                "message": "Redis is required for stateful delta computation",
+                "message": "Falling back to stateless processing",
             },
         )
-        return {
-            "statusCode": 503,
-            "body": json.dumps(
-                {
-                    "processed": 0,
-                    "deltas": 0,
-                    "malformed": malformed_count,
-                    "duplicates": duplicate_count,
-                    "error": "redis_unavailable",
-                }
-            ),
-        }
+        publish_metric("RedisUnavailableFallback", 1, "Count")
 
     try:
         total_deltas = 0
@@ -521,7 +565,10 @@ async def async_main(event):
             chunk = records_to_process[i : i + PROCESSING_CHUNK_SIZE]
 
             with xray_recorder.in_segment("ComputeDeltas"):
-                deltas = await compute_deltas_batched(chunk, redis)
+                if degraded_mode:
+                    deltas = await compute_deltas_stateless(chunk)
+                else:
+                    deltas = await compute_deltas_batched(chunk, redis)
                 total_deltas += len(deltas)
                 publish_metric("DeltasProduced", len(deltas), "Count")
 
@@ -546,6 +593,7 @@ async def async_main(event):
                     "malformed": malformed_count,
                     "duplicates": duplicate_count,
                     "push_failure_batches": push_failure_batches,
+                    "degraded_mode": degraded_mode,
                 }
             ),
         }
