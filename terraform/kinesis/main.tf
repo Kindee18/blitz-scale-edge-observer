@@ -4,6 +4,12 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "deploy_delta_processor_lambda" {
+  description = "Whether to create the delta processor Lambda and event source mapping in this stack."
+  type        = bool
+  default     = false
+}
+
 resource "aws_kms_key" "blitz_key" {
   description             = "KMS key for Blitz-Scale Edge Observer infrastructure"
   deletion_window_in_days = 7
@@ -98,6 +104,7 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
 
 # The Lambda function for delta processing
 resource "aws_lambda_function" "delta_processor" {
+  count         = var.deploy_delta_processor_lambda ? 1 : 0
   function_name = "fantasy-data-delta-processor"
   role          = aws_iam_role.lambda_kinesis_role.arn
   handler       = "delta_processor_lambda.lambda_handler"
@@ -122,8 +129,9 @@ resource "aws_lambda_function" "delta_processor" {
 }
 
 resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
+  count              = var.deploy_delta_processor_lambda ? 1 : 0
   event_source_arn  = aws_kinesis_stream.fantasy_sports_stream.arn
-  function_name     = aws_lambda_function.delta_processor.arn
+  function_name     = aws_lambda_function.delta_processor[0].arn
   starting_position = "LATEST"
   batch_size        = 100
   maximum_retry_attempts = 2
