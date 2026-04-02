@@ -52,7 +52,7 @@ aws kinesis describe-stream --stream-name blitz-data-stream \
 
 # 4. Test WebSocket endpoint
 echo "Testing WebSocket health..."
-curl -s https://api.blitz-obs.com/health | jq '.status'
+curl -s https://blitz-edge-observer.kindsonegbule15.workers.dev/health | jq '.status'
 
 # 5. Check Redis connection pool
 echo "Checking Redis..."
@@ -113,7 +113,7 @@ When fantasy traffic spikes during critical game moments:
 
 ```bash
 # 1. Check current connection count
-curl -s https://api.blitz-obs.com/health | jq '.sessions'
+curl -s https://blitz-edge-observer.kindsonegbule15.workers.dev/health | jq '.sessions'
 
 # 2. Verify auto-scaling is responding
 echo "Current Lambda concurrency:"
@@ -342,7 +342,7 @@ wrangler tail --format=json | jq 'select(.cpuTime > 50)'
 
 ```bash
 # 1. Implement warming ping (automated via cron)
-curl -s https://api.blitz-obs.com/health > /dev/null
+curl -s https://blitz-edge-observer.kindsonegbule15.workers.dev/health > /dev/null
 
 # 2. If persistent cold starts, deploy to additional regions
 # Update wrangler.toml with additional routes:

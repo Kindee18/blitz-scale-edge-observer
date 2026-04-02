@@ -469,7 +469,7 @@ aws logs filter-log-events \
 ```bash
 export STATE_TABLE_NAME=blitz-game-state-versions
 export REDIS_URL=redis://localhost:6379
-export EDGE_WEBHOOK_URL=https://api.blitz-obs.com/webhook/update
+export EDGE_WEBHOOK_URL=https://blitz-edge-observer.kindsonegbule15.workers.dev/webhook/update
 export AWS_REGION=us-east-1
 ```
 
@@ -541,7 +541,7 @@ make deploy-edge
 npm install -g wscat
 
 # Connect to WebSocket
-wscat -c "wss://api.blitz-obs.com/realtime?game_id=NFL_101&client_id=test"
+wscat -c "wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime?game_id=NFL_101&client_id=test"
 
 # Send subscription message
 > {"action":"subscribe","games":["NFL_101"],"league_id":"demo_league"}
@@ -582,8 +582,8 @@ python3 streaming/fantasy_client_sim.py \
 ```bash
 # Run load test against production
 k6 run tests/load/k6_load_test.js \
-  -e BASE_URL=https://api.blitz-obs.com \
-  -e WS_URL=wss://api.blitz-obs.com/realtime \
+  -e BASE_URL=https://blitz-edge-observer.kindsonegbule15.workers.dev \
+  -e WS_URL=wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime \
   -e GAME_ID=NFL_101
 
 # Run against local
@@ -716,7 +716,7 @@ WEBHOOK_SECRET_TOKEN=your-secret-here
 ```bash
 STATE_TABLE_NAME=blitz-game-state-versions
 REDIS_URL=redis://your-redis-endpoint:6379
-EDGE_WEBHOOK_URL=https://api.blitz-obs.com/webhook/update
+EDGE_WEBHOOK_URL=https://blitz-edge-observer.kindsonegbule15.workers.dev/webhook/update
 AWS_REGION=us-east-1
 ```
 

@@ -261,8 +261,8 @@ Overall system error rate: 0.14% (well below 1% SLA)
 ```bash
 # Against production environment
 k6 run tests/load/k6_100x_spike_test.js \
-  -e BASE_URL=https://api.blitz-obs.com \
-  -e WS_URL=wss://api.blitz-obs.com/realtime \
+  -e BASE_URL=https://blitz-edge-observer.kindsonegbule15.workers.dev \
+  -e WS_URL=wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime \
   -e GAME_ID=NFL_KC_SF \
   -e WEBHOOK_SECRET=your-secret
 
@@ -276,8 +276,8 @@ k6 run tests/load/k6_100x_spike_test.js \
 
 ```bash
 k6 run tests/load/k6_fantasypros_patterns.js \
-  -e BASE_URL=https://api.blitz-obs.com \
-  -e WS_URL=wss://api.blitz-obs.com/realtime \
+  -e BASE_URL=https://blitz-edge-observer.kindsonegbule15.workers.dev \
+  -e WS_URL=wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime \
   -e API_TOKEN=your-api-token
 ```
 
@@ -285,8 +285,8 @@ k6 run tests/load/k6_fantasypros_patterns.js \
 
 ```bash
 k6 run tests/load/k6_load_test.js \
-  -e BASE_URL=https://api.blitz-obs.com \
-  -e WS_URL=wss://api.blitz-obs.com/realtime
+  -e BASE_URL=https://blitz-edge-observer.kindsonegbule15.workers.dev \
+  -e WS_URL=wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime
 ```
 
 ---

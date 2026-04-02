@@ -264,8 +264,8 @@ print_summary() {
     
     if [[ "$DEPLOY_EDGE" == "true" ]]; then
         log_success "✓ Cloudflare Edge Worker deployed"
-        echo "  - WebSocket Endpoint: wss://api.blitz-obs.com/realtime"
-        echo "  - Webhook Endpoint: https://api.blitz-obs.com/webhook/update"
+        echo "  - WebSocket Endpoint: wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime"
+        echo "  - Webhook Endpoint: https://blitz-edge-observer.kindsonegbule15.workers.dev/webhook/update"
         echo ""
     fi
     

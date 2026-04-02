@@ -14,8 +14,8 @@ import { Trend, Rate, Counter, Gauge } from 'k6/metrics';
  */
 
 // Configuration
-const BASE_URL = __ENV.BASE_URL || 'https://api.blitz-obs.com';
-const WS_URL = __ENV.WS_URL || 'wss://api.blitz-obs.com/realtime';
+const BASE_URL = __ENV.BASE_URL || 'https://blitz-edge-observer.kindsonegbule15.workers.dev';
+const WS_URL = __ENV.WS_URL || 'wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime';
 const GAME_ID = __ENV.GAME_ID || 'NFL_KC_SF';
 
 // Custom metrics for detailed analysis

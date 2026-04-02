@@ -14,8 +14,8 @@ import { Trend, Rate, Counter } from 'k6/metrics';
  * - My Matchups page behavior
  */
 
-const BASE_URL = __ENV.BASE_URL || 'https://api.blitz-obs.com';
-const WS_URL = __ENV.WS_URL || 'wss://api.blitz-obs.com/realtime';
+const BASE_URL = __ENV.BASE_URL || 'https://blitz-edge-observer.kindsonegbule15.workers.dev';
+const WS_URL = __ENV.WS_URL || 'wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime';
 
 // Custom metrics
 const matchupUpdateLatency = new Trend('matchup_update_latency');

@@ -31,7 +31,9 @@ handler.setFormatter(
 logger.addHandler(handler)
 
 # Configuration
-EDGE_WS_URL = os.getenv("EDGE_WS_URL", "wss://api.blitz-obs.com/realtime")
+EDGE_WS_URL = os.getenv(
+    "EDGE_WS_URL", "wss://blitz-edge-observer.kindsonegbule15.workers.dev/realtime"
+)
 
 
 @dataclass
