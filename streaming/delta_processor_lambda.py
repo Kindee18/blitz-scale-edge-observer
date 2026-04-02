@@ -9,7 +9,7 @@ import time
 import urllib.request
 from typing import Dict, Optional
 
-import aioredis
+import redis.asyncio as redis_async
 import boto3
 from aws_xray_sdk.core import patch_all, xray_recorder
 from botocore.config import Config
@@ -187,7 +187,7 @@ def send_operational_alert(title, details):
 
 
 async def get_redis():
-    return await aioredis.from_url(REDIS_URL, decode_responses=True)
+    return redis_async.from_url(REDIS_URL, decode_responses=True)
 
 
 async def is_duplicate_event(redis, dedupe_key):
@@ -556,4 +556,4 @@ async def async_main(event):
         return {"statusCode": 500, "body": str(exc)}
     finally:
         if redis:
-            await redis.close()
+            await redis.aclose()
