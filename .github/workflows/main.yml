@@ -283,6 +283,16 @@ jobs:
       - name: Configure kubeconfig (Staging)
         run: aws eks update-kubeconfig --name blitz-edge-cluster --region ${{ env.AWS_REGION }}
 
+      - name: Build Delta Processor Layer (Shared Infra)
+        run: |
+          cd terraform/kinesis
+          rm -rf python lambda_layer.zip
+          pip install --target=python -r ../../requirements.txt --quiet
+          find python -name "*.pyc" -delete
+          find python -name "__pycache__" -type d -exec rm -rf {} +
+          find python -name "*.dist-info" -type d -exec rm -rf {} +
+          zip -r lambda_layer.zip python/ -q
+
       - name: Terraform Apply (Shared Infra)
         run: |
           for dir in terraform/aws_shared terraform/dynamodb terraform/kinesis; do
