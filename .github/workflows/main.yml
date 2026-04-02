@@ -283,6 +283,16 @@ jobs:
       - name: Configure kubeconfig (Staging)
         run: aws eks update-kubeconfig --name blitz-edge-cluster --region ${{ env.AWS_REGION }}
 
+      - name: Terraform Apply (Shared Infra)
+        run: |
+          for dir in terraform terraform/dynamodb terraform/kinesis; do
+            echo "Applying $dir"
+            cd "$GITHUB_WORKSPACE/$dir"
+            terraform init -reconfigure
+            terraform plan -lock-timeout=10m -out=tfplan
+            terraform apply -lock-timeout=10m -auto-approve tfplan
+          done
+
       - name: Terraform Apply (Staging)
         run: |
           cd terraform/eks
