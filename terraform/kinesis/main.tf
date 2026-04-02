@@ -155,8 +155,15 @@ data "archive_file" "delta_processor_dummy_zip" {
 
 resource "aws_lambda_layer_version" "delta_processor_dependencies" {
   layer_name          = "fantasy-data-delta-deps"
-  filename            = "${path.module}/lambda_layer.zip"
+  filename            = data.archive_file.delta_processor_layer_zip.output_path
+  source_code_hash    = data.archive_file.delta_processor_layer_zip.output_base64sha256
   compatible_runtimes = ["python3.11"]
+}
+
+data "archive_file" "delta_processor_layer_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/python"
+  output_path = "${path.module}/lambda_layer.zip"
 }
 
 # The Lambda function for delta processing
