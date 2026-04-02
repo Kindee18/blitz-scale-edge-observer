@@ -162,8 +162,18 @@ resource "aws_lambda_layer_version" "delta_processor_dependencies" {
 
 data "archive_file" "delta_processor_layer_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/python"
+  source_dir  = path.module
   output_path = "${path.module}/lambda_layer.zip"
+
+  excludes = [
+    "*.tf",
+    "*.tfvars",
+    ".terraform.lock.hcl",
+    ".terraform/*",
+    ".terraform/**",
+    "lambda_layer.zip",
+    ".generated-delta-processor.zip"
+  ]
 }
 
 # The Lambda function for delta processing
