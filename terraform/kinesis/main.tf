@@ -111,15 +111,52 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
         Resource = [
           aws_kinesis_stream.fantasy_sports_stream.arn
         ]
+      },
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect = "Allow"
+        Resource = [
+          "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/fantasy-data-delta-processor:*",
+          "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/fantasy-data-delta-processor"
+        ]
       }
     ]
   })
 }
 
 data "archive_file" "delta_processor_dummy_zip" {
-  type                    = "zip"
-  source_file             = "${path.module}/../../streaming/delta_processor_lambda.py"
-  output_path             = "${path.module}/.generated-delta-processor.zip"
+  type        = "zip"
+  output_path = "${path.module}/.generated-delta-processor.zip"
+
+  source {
+    content  = file("${path.module}/../../streaming/delta_processor_lambda.py")
+    filename = "delta_processor_lambda.py"
+  }
+
+  source {
+    content  = file("${path.module}/../../streaming/fantasy_scoring.py")
+    filename = "fantasy_scoring.py"
+  }
+
+  source {
+    content  = file("${path.module}/../../monitoring/custom_metrics.py")
+    filename = "monitoring/custom_metrics.py"
+  }
+
+  source {
+    content  = ""
+    filename = "monitoring/__init__.py"
+  }
+}
+
+resource "aws_lambda_layer_version" "delta_processor_dependencies" {
+  layer_name          = "fantasy-data-delta-deps"
+  filename            = "${path.module}/lambda_layer.zip"
+  compatible_runtimes = ["python3.11"]
 }
 
 # The Lambda function for delta processing
@@ -134,6 +171,8 @@ resource "aws_lambda_function" "delta_processor" {
   tracing_config {
     mode = "Active"
   }
+
+  layers = [aws_lambda_layer_version.delta_processor_dependencies.arn]
 
   # Package current lambda source into a deployment zip during terraform apply.
   filename         = data.archive_file.delta_processor_dummy_zip.output_path

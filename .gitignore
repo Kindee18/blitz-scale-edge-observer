@@ -25,3 +25,10 @@ dist/
 dummy.zip
 .env.secrets
 .vscode/
+
+# Generated Lambda packaging artifacts
+terraform/kinesis/python/
+terraform/kinesis/lambda_layer.zip
+terraform/kinesis/.generated-delta-processor.zip
+lambda_event.json
+lambda_invoke_out.json
