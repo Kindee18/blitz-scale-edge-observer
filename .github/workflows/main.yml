@@ -285,7 +285,7 @@ jobs:
 
       - name: Terraform Apply (Shared Infra)
         run: |
-          for dir in terraform terraform/dynamodb terraform/kinesis; do
+          for dir in terraform/dynamodb terraform/kinesis; do
             echo "Applying $dir"
             cd "$GITHUB_WORKSPACE/$dir"
             terraform init -reconfigure

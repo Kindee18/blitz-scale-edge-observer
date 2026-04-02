@@ -28,10 +28,6 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
-data "aws_secretsmanager_secret" "edge_token" {
-  name = "blitz-edge-webhook-token"
-}
-
 resource "aws_kinesis_stream" "fantasy_sports_stream" {
   name             = "fantasy-sports-realtime-ingest"
   shard_count      = 10
@@ -85,7 +81,7 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
           "secretsmanager:GetSecretValue"
         ]
         Effect   = "Allow"
-        Resource = [data.aws_secretsmanager_secret.edge_token.arn]
+        Resource = ["arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:blitz-edge-webhook-token*"]
       },
       {
         Action = [
