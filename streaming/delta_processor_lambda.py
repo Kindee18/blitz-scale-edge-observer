@@ -458,7 +458,9 @@ async def compute_deltas_stateless(records):
                         projected_points,
                     )
             except Exception as exc:
-                logger.warning(f"Stateless fantasy calculation failed for {player_id}: {exc}")
+                logger.warning(
+                    f"Stateless fantasy calculation failed for {player_id}: {exc}"
+                )
         else:
             fantasy_delta = _build_fallback_delta(record, {})
 
