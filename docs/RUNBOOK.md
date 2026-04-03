@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD009 MD022 MD031 MD032 MD036 MD051 MD060 -->
+﻿<!-- markdownlint-disable MD009 MD022 MD031 MD032 MD036 MD051 MD060 -->
 
 # Blitz-Scale Edge Observer - Operational Runbook
 
@@ -22,7 +22,7 @@ This runbook covers operational procedures for the Blitz-Scale Edge Observer inf
 **Key Components:**
 
 - **Predictive Scaler:** EKS pre-warming for NFL Sunday spikes
-- **Delta Processor:** Kinesis → Lambda → Fantasy points calculation
+- **Delta Processor:** Kinesis -> Lambda -> Fantasy points calculation
 - **Edge Worker:** Cloudflare WebSocket broadcasting
 - **FinOps Filter:** Log cost optimization (93% reduction)
 
@@ -47,7 +47,7 @@ kubectl get nodes -o wide
 
 # 3. Verify Kinesis stream capacity
 echo "Checking Kinesis shards..."
-aws kinesis describe-stream --stream-name blitz-data-stream \
+aws kinesis describe-stream --stream-name fantasy-sports-realtime-ingest \
   --query 'StreamDescription.Shards' | jq length
 
 # 4. Test WebSocket endpoint
@@ -91,7 +91,7 @@ kubectl get deployments spike-buffer -n default
 make logs-processor
 
 # Window 2: CloudWatch metrics dashboard
-open "https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=blitz-scale-edge-observer"
+open "https://console.aws.amazon.com/cloudwatch/home?region=us-east-1#dashboards:name=Blitz-Scale-Observer-Ops"
 
 # Window 3: WebSocket connection metrics
 wrangler tail
@@ -100,7 +100,7 @@ wrangler tail
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis \
   --metric-name IncomingRecords \
-  --dimensions Name=StreamName,Value=blitz-data-stream \
+  --dimensions Name=StreamName,Value=fantasy-sports-realtime-ingest \
   --start-time $(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 60 \
@@ -117,14 +117,14 @@ curl -s https://blitz-edge-observer.kindsonegbule15.workers.dev/health | jq '.se
 
 # 2. Verify auto-scaling is responding
 echo "Current Lambda concurrency:"
-aws lambda get-function-concurrency --function-name blitz-delta-processor
+aws lambda get-function-concurrency --function-name fantasy-data-delta-processor
 
 # 3. Monitor for throttling
 echo "Checking for throttling..."
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Lambda \
   --metric-name Throttles \
-  --dimensions Name=FunctionName,Value=blitz-delta-processor \
+  --dimensions Name=FunctionName,Value=fantasy-data-delta-processor \
   --start-time $(date -u -d '10 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 60 \
@@ -133,7 +133,7 @@ aws cloudwatch get-metric-statistics \
 # 4. Emergency scale-up if needed
 # (Only if predictive scaling failed)
 aws lambda put-function-concurrency \
-  --function-name blitz-delta-processor \
+  --function-name fantasy-data-delta-processor \
   --reserved-concurrent-executions 1000
 ```
 
@@ -239,7 +239,7 @@ aws cloudwatch get-metric-statistics \
 
 # Check Redis connection errors in Lambda logs
 aws logs filter-log-events \
-  --log-group-name /aws/lambda/blitz-delta-processor \
+  --log-group-name /aws/lambda/fantasy-data-delta-processor \
   --filter-pattern "RedisConnectionError" \
   --start-time $(date -d '5 minutes ago' +%s)000
 ```
@@ -257,7 +257,7 @@ aws dynamodb scan --table-name blitz-game-state-versions --max-items 5
 
 # 3. If Redis completely unavailable, increase Lambda timeout temporarily
 aws lambda update-function-configuration \
-  --function-name blitz-delta-processor \
+  --function-name fantasy-data-delta-processor \
   --timeout 30
 
 # 4. Monitor for recovery
@@ -279,18 +279,18 @@ watch -n 10 'aws elasticache describe-events --source-identifier blitz-redis --m
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis \
   --metric-name GetRecords.IteratorAgeMilliseconds \
-  --dimensions Name=StreamName,Value=blitz-data-stream \
+  --dimensions Name=StreamName,Value=fantasy-sports-realtime-ingest \
   --statistics Average \
   --period 60
 
 # Check Lambda concurrent executions
-aws lambda get-function-concurrency --function-name blitz-delta-processor
+aws lambda get-function-concurrency --function-name fantasy-data-delta-processor
 
 # Check for throttling
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Lambda \
   --metric-name Throttles \
-  --dimensions Name=FunctionName,Value=blitz-delta-processor \
+  --dimensions Name=FunctionName,Value=fantasy-data-delta-processor \
   --statistics Sum \
   --period 60
 ```
@@ -300,25 +300,25 @@ aws cloudwatch get-metric-statistics \
 ```bash
 # 1. Increase Kinesis shard count for parallel processing
 aws kinesis update-shard-count \
-  --stream-name blitz-data-stream \
+  --stream-name fantasy-sports-realtime-ingest \
   --target-shard-count 20 \
   --scaling-type UNIFORM_SCALING
 
 # 2. Increase Lambda concurrency limit
 aws lambda put-function-concurrency \
-  --function-name blitz-delta-processor \
+  --function-name fantasy-data-delta-processor \
   --reserved-concurrent-executions 1000
 
 # 3. If delay > 30 seconds, enable enhanced fan-out for dedicated throughput
 aws kinesis register-stream-consumer \
-  --stream-arn arn:aws:kinesis:us-east-1:123456789012:stream/blitz-data-stream \
+  --stream-arn arn:aws:kinesis:us-east-1:599626781403:stream/fantasy-sports-realtime-ingest \
   --consumer-name blitz-emergency-consumer
 
 # 4. Monitor backlog clearing
 watch -n 5 'aws cloudwatch get-metric-statistics \
   --namespace AWS/Kinesis \
   --metric-name IncomingRecords \
-  --dimensions Name=StreamName,Value=blitz-data-stream \
+  --dimensions Name=StreamName,Value=fantasy-sports-realtime-ingest \
   --statistics Sum --period 60 --start-time $(date -d -5minutes +%Y-%m-%dT%H:%M:%SZ)'
 ```
 
@@ -414,12 +414,12 @@ EOF
 ```bash
 # Scale shards immediately
 aws kinesis update-shard-count \
-    --stream-name blitz-data-stream \
+    --stream-name fantasy-sports-realtime-ingest \
     --target-shard-count 20 \
     --scaling-type UNIFORM_SCALING
 
 # Monitor scaling progress
-aws kinesis describe-stream --stream-name blitz-data-stream --query 'StreamDescription.StreamStatus'
+aws kinesis describe-stream --stream-name fantasy-sports-realtime-ingest --query 'StreamDescription.StreamStatus'
 ```
 
 ---
@@ -563,3 +563,4 @@ Current high-priority alert triggers:
 ---
 
 _Version 1.1.0 | Maintained by Platform Engineering_
+

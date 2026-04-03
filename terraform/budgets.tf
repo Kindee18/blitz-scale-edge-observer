@@ -11,6 +11,6 @@ resource "aws_budgets_budget" "blitz_cost_limit" {
     threshold                  = 80
     threshold_type             = "PERCENTAGE"
     notification_type          = "ACTUAL"
-    subscriber_email_addresses = ["admin@blitz-obs.com"]
+    subscriber_email_addresses = ["kindson002@gmail.com"]
   }
 }
