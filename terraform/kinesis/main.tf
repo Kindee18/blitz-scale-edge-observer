@@ -16,12 +16,6 @@ variable "edge_webhook_url" {
   default     = "https://blitz-edge-observer.kindsonegbule15.workers.dev/webhook/update"
 }
 
-variable "redis_url" {
-  description = "Optional Redis endpoint used for dedupe/state cache by delta processor."
-  type        = string
-  default     = "redis://blitz-edge-redis.1o4x1b.ng.0001.use1.cache.amazonaws.com:6379"
-}
-
 variable "lambda_vpc_subnet_ids" {
   description = "Private subnet IDs for Lambda VPC networking."
   type        = list(string)
@@ -32,12 +26,16 @@ variable "lambda_vpc_subnet_ids" {
   ]
 }
 
-variable "lambda_vpc_security_group_ids" {
-  description = "Security groups attached to the delta processor Lambda."
-  type        = list(string)
-  default = [
-    "sg-06bfdcd3afa510cd5",
-  ]
+variable "vpc_id" {
+  description = "VPC ID where Lambda and Redis are provisioned."
+  type        = string
+  default     = "vpc-086f1dcd8b724c877"
+}
+
+variable "delta_processor_layer_arn" {
+  description = "Prebuilt dependency layer ARN for the delta processor Lambda."
+  type        = string
+  default     = "arn:aws:lambda:us-east-1:599626781403:layer:fantasy-data-delta-deps:8"
 }
 
 resource "aws_kms_key" "blitz_key" {
@@ -63,6 +61,10 @@ provider "aws" {
 }
 
 data "aws_caller_identity" "current" {}
+
+locals {
+  redis_url = "redis://${aws_elasticache_replication_group.blitz_edge_redis.primary_endpoint_address}:${aws_elasticache_replication_group.blitz_edge_redis.port}"
+}
 
 resource "aws_kinesis_stream" "fantasy_sports_stream" {
   name             = "fantasy-sports-realtime-ingest"
@@ -170,6 +172,59 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
+resource "aws_security_group" "lambda_redis_egress" {
+  name        = "blitz-delta-lambda-redis-egress"
+  description = "Lambda egress to Redis"
+  vpc_id      = var.vpc_id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "redis_ingress" {
+  name        = "blitz-redis-ingress"
+  description = "Allow Redis from Lambda"
+  vpc_id      = var.vpc_id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "redis_from_lambda" {
+  security_group_id            = aws_security_group.redis_ingress.id
+  referenced_security_group_id = aws_security_group.lambda_redis_egress.id
+  from_port                    = 6379
+  to_port                      = 6379
+  ip_protocol                  = "tcp"
+}
+
+resource "aws_elasticache_subnet_group" "blitz_edge_redis" {
+  name       = "blitz-edge-redis-subnet-group"
+  subnet_ids = var.lambda_vpc_subnet_ids
+}
+
+resource "aws_elasticache_replication_group" "blitz_edge_redis" {
+  replication_group_id       = "blitz-edge-redis"
+  description                = "Blitz edge redis cache"
+  engine                     = "redis"
+  node_type                  = "cache.t4g.micro"
+  num_node_groups            = 1
+  replicas_per_node_group    = 0
+  automatic_failover_enabled = false
+
+  subnet_group_name  = aws_elasticache_subnet_group.blitz_edge_redis.name
+  security_group_ids = [aws_security_group.redis_ingress.id]
+
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = false
+  auto_minor_version_upgrade = true
+
+  tags = {
+    Project = "Blitz-Scale-Edge-Observer"
+  }
+}
+
 data "archive_file" "delta_processor_dummy_zip" {
   type        = "zip"
   output_path = "${path.module}/.generated-delta-processor.zip"
@@ -195,29 +250,6 @@ data "archive_file" "delta_processor_dummy_zip" {
   }
 }
 
-resource "aws_lambda_layer_version" "delta_processor_dependencies" {
-  layer_name          = "fantasy-data-delta-deps"
-  filename            = data.archive_file.delta_processor_layer_zip.output_path
-  source_code_hash    = data.archive_file.delta_processor_layer_zip.output_base64sha256
-  compatible_runtimes = ["python3.11"]
-}
-
-data "archive_file" "delta_processor_layer_zip" {
-  type        = "zip"
-  source_dir  = path.module
-  output_path = "${path.module}/lambda_layer.zip"
-
-  excludes = [
-    "*.tf",
-    "*.tfvars",
-    ".terraform.lock.hcl",
-    ".terraform/*",
-    ".terraform/**",
-    "lambda_layer.zip",
-    ".generated-delta-processor.zip"
-  ]
-}
-
 # The Lambda function for delta processing
 resource "aws_lambda_function" "delta_processor" {
   count         = var.deploy_delta_processor_lambda ? 1 : 0
@@ -231,11 +263,11 @@ resource "aws_lambda_function" "delta_processor" {
     mode = "Active"
   }
 
-  layers = [aws_lambda_layer_version.delta_processor_dependencies.arn]
+  layers = [var.delta_processor_layer_arn]
 
   vpc_config {
     subnet_ids         = var.lambda_vpc_subnet_ids
-    security_group_ids = var.lambda_vpc_security_group_ids
+    security_group_ids = [aws_security_group.lambda_redis_egress.id]
   }
 
   # Package current lambda source into a deployment zip during terraform apply.
@@ -244,7 +276,7 @@ resource "aws_lambda_function" "delta_processor" {
 
   environment {
     variables = {
-      REDIS_URL           = var.redis_url
+      REDIS_URL           = local.redis_url
       EDGE_WEBHOOK_URL    = var.edge_webhook_url
       WEBHOOK_SECRET_NAME = "blitz-edge-webhook-token"
     }
