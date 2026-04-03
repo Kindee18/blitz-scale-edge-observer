@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "alert_email" {
   description = "Email address for operational alerts"
   type        = string
-  default     = "admin@blitz-obs.com"
+  default     = "kindson002@gmail.com"
 }
 
 provider "aws" {
