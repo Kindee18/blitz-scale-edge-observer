@@ -273,8 +273,8 @@ async def push_to_edge(deltas):
         publish_metric("EdgePushSkippedCircuitOpen", len(deltas), "Count")
         return False
 
-    if not EDGE_WEBHOOK_URL or not WEBHOOK_SECRET_TOKEN:
-        logger.error("EDGE_WEBHOOK_URL or WEBHOOK_SECRET_TOKEN missing")
+    if not EDGE_WEBHOOK_URL:
+        logger.error("EDGE_WEBHOOK_URL missing")
         publish_metric("EdgePushConfigError", 1, "Count")
         return False
 
@@ -282,8 +282,14 @@ async def push_to_edge(deltas):
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {WEBHOOK_SECRET_TOKEN}",
     }
+    if WEBHOOK_SECRET_TOKEN:
+        headers["Authorization"] = f"Bearer {WEBHOOK_SECRET_TOKEN}"
+    else:
+        logger.warning(
+            "WEBHOOK_SECRET_TOKEN missing; sending unsigned edge webhook request"
+        )
+        publish_metric("EdgePushUnsigned", 1, "Count")
 
     all_success = True
     async with aiohttp.ClientSession() as session:
