@@ -320,6 +320,60 @@ jobs:
         run: |
           curl -fsS --retry 3 --retry-delay 2 https://blitz-edge-observer-staging.kindsonegbule15.workers.dev/health
 
+      - name: Post-Deploy Lambda Runtime Gate (Staging)
+        run: |
+          pip install --quiet boto3
+          python - <<'PY'
+          import base64
+          import json
+          import time
+
+          import boto3
+
+          client = boto3.client("lambda", region_name="us-east-1")
+
+          event_payload = {
+              "game_id": "CI-STAGING-GATE",
+              "player_id": "CI-STAGING-PLAYER",
+              "timestamp": int(time.time() * 1000),
+              "stats": {"points": 1.0},
+              "projected_points": 2.0,
+              "scoring_format": "ppr",
+              "sport": "nba",
+          }
+
+          record_data = base64.b64encode(json.dumps(event_payload).encode("utf-8")).decode("utf-8")
+          payload = {
+              "Records": [
+                  {
+                      "kinesis": {
+                          "sequenceNumber": "777001",
+                          "approximateArrivalTimestamp": int(time.time()),
+                          "data": record_data,
+                      }
+                  }
+              ]
+          }
+
+          response = client.invoke(
+              FunctionName="fantasy-data-delta-processor",
+              InvocationType="RequestResponse",
+              Payload=json.dumps(payload).encode("utf-8"),
+          )
+          raw = response["Payload"].read().decode("utf-8", errors="replace")
+          envelope = json.loads(raw)
+          body = json.loads(envelope.get("body", "{}"))
+
+          if envelope.get("statusCode") != 200:
+              raise SystemExit(f"Lambda gate failed: non-200 status. Response: {raw}")
+          if body.get("degraded_mode") is True:
+              raise SystemExit(f"Lambda gate failed: degraded_mode=true. Response: {raw}")
+          if body.get("push_failure_batches", 0) > 0:
+              raise SystemExit(f"Lambda gate failed: push_failure_batches>0. Response: {raw}")
+
+          print("Lambda runtime gate passed:", raw)
+          PY
+
   # ============================================
   # Phase 5: Production Deployment (with approval)
   # ============================================
@@ -376,6 +430,60 @@ jobs:
         run: |
           curl -fsS --retry 3 --retry-delay 2 https://blitz-edge-observer.kindsonegbule15.workers.dev/health
           echo "✅ Production deployment successful"
+
+      - name: Post-Deploy Lambda Runtime Gate (Production)
+        run: |
+          pip install --quiet boto3
+          python - <<'PY'
+          import base64
+          import json
+          import time
+
+          import boto3
+
+          client = boto3.client("lambda", region_name="us-east-1")
+
+          event_payload = {
+              "game_id": "CI-PROD-GATE",
+              "player_id": "CI-PROD-PLAYER",
+              "timestamp": int(time.time() * 1000),
+              "stats": {"points": 1.0},
+              "projected_points": 2.0,
+              "scoring_format": "ppr",
+              "sport": "nba",
+          }
+
+          record_data = base64.b64encode(json.dumps(event_payload).encode("utf-8")).decode("utf-8")
+          payload = {
+              "Records": [
+                  {
+                      "kinesis": {
+                          "sequenceNumber": "888001",
+                          "approximateArrivalTimestamp": int(time.time()),
+                          "data": record_data,
+                      }
+                  }
+              ]
+          }
+
+          response = client.invoke(
+              FunctionName="fantasy-data-delta-processor",
+              InvocationType="RequestResponse",
+              Payload=json.dumps(payload).encode("utf-8"),
+          )
+          raw = response["Payload"].read().decode("utf-8", errors="replace")
+          envelope = json.loads(raw)
+          body = json.loads(envelope.get("body", "{}"))
+
+          if envelope.get("statusCode") != 200:
+              raise SystemExit(f"Lambda gate failed: non-200 status. Response: {raw}")
+          if body.get("degraded_mode") is True:
+              raise SystemExit(f"Lambda gate failed: degraded_mode=true. Response: {raw}")
+          if body.get("push_failure_batches", 0) > 0:
+              raise SystemExit(f"Lambda gate failed: push_failure_batches>0. Response: {raw}")
+
+          print("Lambda runtime gate passed:", raw)
+          PY
 
       - name: Notify Slack
         if: always() && env.SLACK_WEBHOOK_URL != ''
