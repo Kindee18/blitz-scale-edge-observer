@@ -298,8 +298,13 @@ jobs:
             echo "Applying $dir"
             cd "$GITHUB_WORKSPACE/$dir"
             terraform init -reconfigure
-            terraform plan -lock-timeout=10m -out=tfplan
-            terraform apply -lock-timeout=10m -auto-approve tfplan
+            if [ "$dir" = "terraform/kinesis" ]; then
+              terraform plan -lock-timeout=10m -var-file=environments/staging.tfvars -out=tfplan
+              terraform apply -lock-timeout=10m -auto-approve tfplan
+            else
+              terraform plan -lock-timeout=10m -out=tfplan
+              terraform apply -lock-timeout=10m -auto-approve tfplan
+            fi
           done
 
       - name: Terraform Apply (Staging)
@@ -410,6 +415,30 @@ jobs:
 
       - name: Configure kubeconfig (Production)
         run: aws eks update-kubeconfig --name blitz-edge-cluster --region ${{ env.AWS_REGION }}
+
+      - name: Build Delta Processor Layer (Shared Infra)
+        run: |
+          cd terraform/kinesis
+          rm -rf python lambda_layer.zip
+          pip install --target=python -r ../../streaming/requirements_lambda.txt --quiet
+          find python -name "*.pyc" -delete
+          find python -name "__pycache__" -type d -exec rm -rf {} +
+          zip -r lambda_layer.zip python/ -q
+
+      - name: Terraform Apply (Shared Infra Production)
+        run: |
+          for dir in terraform/aws_shared terraform/dynamodb terraform/kinesis; do
+            echo "Applying $dir"
+            cd "$GITHUB_WORKSPACE/$dir"
+            terraform init -reconfigure
+            if [ "$dir" = "terraform/kinesis" ]; then
+              terraform plan -lock-timeout=10m -var-file=environments/production.tfvars -out=tfplan
+              terraform apply -lock-timeout=10m -auto-approve tfplan
+            else
+              terraform plan -lock-timeout=10m -out=tfplan
+              terraform apply -lock-timeout=10m -auto-approve tfplan
+            fi
+          done
 
       - name: Terraform Apply (Production)
         run: |

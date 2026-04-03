@@ -13,29 +13,25 @@ variable "deploy_delta_processor_lambda" {
 variable "edge_webhook_url" {
   description = "Webhook endpoint for edge update pushes."
   type        = string
-  default     = "https://blitz-edge-observer.kindsonegbule15.workers.dev/webhook/update"
+  default     = ""
 }
 
 variable "lambda_vpc_subnet_ids" {
   description = "Private subnet IDs for Lambda VPC networking."
   type        = list(string)
-  default = [
-    "subnet-061628e5efdba569e",
-    "subnet-0267049c261b0a2bf",
-    "subnet-015eee29733fd6a29",
-  ]
+  default     = []
 }
 
 variable "vpc_id" {
   description = "VPC ID where Lambda and Redis are provisioned."
   type        = string
-  default     = "vpc-086f1dcd8b724c877"
+  default     = ""
 }
 
 variable "delta_processor_layer_arn" {
   description = "Prebuilt dependency layer ARN for the delta processor Lambda."
   type        = string
-  default     = "arn:aws:lambda:us-east-1:599626781403:layer:fantasy-data-delta-deps:8"
+  default     = ""
 }
 
 resource "aws_kms_key" "blitz_key" {
