@@ -10,6 +10,18 @@ variable "deploy_delta_processor_lambda" {
   default     = true
 }
 
+variable "edge_webhook_url" {
+  description = "Webhook endpoint for edge update pushes."
+  type        = string
+  default     = "https://blitz-edge-observer.kindsonegbule15.workers.dev/webhook/update"
+}
+
+variable "redis_url" {
+  description = "Optional Redis endpoint used for dedupe/state cache by delta processor."
+  type        = string
+  default     = ""
+}
+
 resource "aws_kms_key" "blitz_key" {
   description             = "KMS key for Blitz-Scale Edge Observer infrastructure"
   deletion_window_in_days = 7
@@ -197,8 +209,8 @@ resource "aws_lambda_function" "delta_processor" {
 
   environment {
     variables = {
-      REDIS_URL             = "redis://blitz-cache.redis.amazonaws.com:6379"
-      EDGE_WEBHOOK_URL      = "https://api.blitz-obs.com/webhook/update"
+      REDIS_URL             = var.redis_url
+      EDGE_WEBHOOK_URL      = var.edge_webhook_url
       WEBHOOK_SECRET_NAME   = "blitz-edge-webhook-token"
     }
   }
