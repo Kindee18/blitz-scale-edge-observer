@@ -460,7 +460,7 @@ make logs-processor
 
 # Filter for errors only
 aws logs filter-log-events \
-  --log-group-name /aws/lambda/blitz-delta-processor \
+  --log-group-name /aws/lambda/fantasy-data-delta-processor \
   --filter-pattern "ERROR"
 ```
 
@@ -600,7 +600,7 @@ k6 run tests/load/k6_load_test.js \
 
 ```bash
 # Via Terraform (included in scheduled_scaler.tf)
-cd terraform/eks
+cd terraform/aws_shared
 terraform apply -target=aws_cloudwatch_dashboard.main
 ```
 
@@ -608,7 +608,7 @@ terraform apply -target=aws_cloudwatch_dashboard.main
 
 ```bash
 # Open in browser
-aws cloudwatch get-dashboard --dashboard-name blitz-scale-edge-observer
+aws cloudwatch get-dashboard --dashboard-name Blitz-Scale-Observer-Ops
 ```
 
 **Custom Metrics (from Lambda):**
@@ -678,6 +678,13 @@ make preflight-ci      # Validate CI prerequisites
 ---
 
 ### 4. Configuration Reference
+
+Kinesis configuration is environment-specific and now provided through tfvars files:
+
+- `terraform/kinesis/environments/staging.tfvars`
+- `terraform/kinesis/environments/production.tfvars`
+
+These files provide values such as `edge_webhook_url`, `vpc_id`, `lambda_vpc_subnet_ids`, and `delta_processor_layer_arn`.
 
 #### **Required AWS Resources**
 
@@ -753,7 +760,7 @@ redis-cli -u $REDIS_URL ping
 aws cloudwatch get-metric-statistics \
   --namespace AWS/Lambda \
   --metric-name ConcurrentExecutions \
-  --dimensions Name=FunctionName,Value=blitz-delta-processor
+  --dimensions Name=FunctionName,Value=fantasy-data-delta-processor
 ```
 
 **Issue: Terraform lock contention**
@@ -774,8 +781,17 @@ terraform force-unlock <LOCK_ID>
 | Quality Gate      | PR/Push          | Lint, Security Scan (tfsec, Checkov) |
 | Test Gate         | Quality pass     | Unit tests, Coverage report          |
 | Terraform Plan    | Test pass        | Plan with PR comment                 |
-| Staging Deploy    | Merge to develop | Auto-deploy to staging               |
-| Production Deploy | Merge to main    | Approval gate, then deploy           |
+| Staging Deploy    | Merge to main    | Shared infra apply + EKS deploy + Worker deploy + Lambda runtime gate |
+| Production Deploy | Merge to main    | Shared infra apply + EKS deploy + Worker deploy + Lambda runtime gate |
+
+Post-deploy runtime gates invoke `fantasy-data-delta-processor` and fail the workflow if:
+
+- `statusCode != 200`
+- `degraded_mode == true`
+- `push_failure_batches > 0`
+
+Operational alarms are published to SNS topic `blitz-edge-ops-alerts` with email endpoint `kindson002@gmail.com`.
+SNS email delivery requires subscription confirmation from the recipient mailbox.
 
 **Manual Deployment:**
 
