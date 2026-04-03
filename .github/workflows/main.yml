@@ -287,7 +287,7 @@ jobs:
         run: |
           cd terraform/kinesis
           rm -rf python lambda_layer.zip
-          pip install --target=python -r ../../requirements.txt --quiet
+          pip install --target=python -r ../../streaming/requirements_lambda.txt --quiet
           find python -name "*.pyc" -delete
           find python -name "__pycache__" -type d -exec rm -rf {} +
           zip -r lambda_layer.zip python/ -q
