@@ -706,15 +706,11 @@ export default {
 		if (url.pathname === "/webhook/update" && request.method === "POST") {
 			const configuredWebhookToken = env.WEBHOOK_SECRET_TOKEN;
 			const authHeader = request.headers.get("Authorization");
-			if (configuredWebhookToken) {
-				if (authHeader !== `Bearer ${configuredWebhookToken}`) {
-					logger.warn("Unauthorized webhook request", {
-						authHeader: authHeader?.slice(0, 20),
-					});
-					return new Response("Unauthorized", { status: 401 });
-				}
-			} else {
-				logger.warn("WEBHOOK_SECRET_TOKEN not configured; accepting unsigned webhook");
+			if (!configuredWebhookToken || authHeader !== `Bearer ${configuredWebhookToken}`) {
+				logger.warn("Unauthorized webhook request", {
+					authHeader: authHeader?.slice(0, 20),
+				});
+				return new Response("Unauthorized", { status: 401 });
 			}
 
 			try {
