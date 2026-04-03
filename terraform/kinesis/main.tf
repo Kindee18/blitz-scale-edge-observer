@@ -135,6 +135,13 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
           "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/fantasy-data-delta-processor:*",
           "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/fantasy-data-delta-processor"
         ]
+      },
+      {
+        Action = [
+          "cloudwatch:PutMetricData"
+        ]
+        Effect   = "Allow"
+        Resource = ["*"]
       }
     ]
   })
