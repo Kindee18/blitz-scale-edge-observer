@@ -704,7 +704,7 @@ export default {
 
 		// Webhook Ingest from AWS Lambda
 		if (url.pathname === "/webhook/update" && request.method === "POST") {
-			const configuredWebhookToken = env.WEBHOOK_SECRET_TOKEN;
+			const configuredWebhookToken = (env.WEBHOOK_SECRET_TOKEN || "").trim();
 			const authHeader = request.headers.get("Authorization");
 			if (!configuredWebhookToken || authHeader !== `Bearer ${configuredWebhookToken}`) {
 				logger.warn("Unauthorized webhook request", {
