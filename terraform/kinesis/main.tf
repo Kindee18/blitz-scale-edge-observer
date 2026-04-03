@@ -19,7 +19,25 @@ variable "edge_webhook_url" {
 variable "redis_url" {
   description = "Optional Redis endpoint used for dedupe/state cache by delta processor."
   type        = string
-  default     = ""
+  default     = "redis://blitz-edge-redis.1o4x1b.ng.0001.use1.cache.amazonaws.com:6379"
+}
+
+variable "lambda_vpc_subnet_ids" {
+  description = "Private subnet IDs for Lambda VPC networking."
+  type        = list(string)
+  default = [
+    "subnet-061628e5efdba569e",
+    "subnet-0267049c261b0a2bf",
+    "subnet-015eee29733fd6a29",
+  ]
+}
+
+variable "lambda_vpc_security_group_ids" {
+  description = "Security groups attached to the delta processor Lambda."
+  type        = list(string)
+  default = [
+    "sg-06bfdcd3afa510cd5",
+  ]
 }
 
 resource "aws_kms_key" "blitz_key" {
@@ -71,8 +89,8 @@ resource "aws_sqs_queue" "delta_processor_dlq" {
 }
 
 resource "aws_iam_role" "lambda_kinesis_role" {
-  name        = "lambda_kinesis_delta_processor"
-  description = "Role for Lambda to process Kinesis streams and update Redis/DynamoDB"
+  name                  = "lambda_kinesis_delta_processor"
+  description           = "Role for Lambda to process Kinesis streams and update Redis/DynamoDB"
   force_detach_policies = true
 
   assume_role_policy = jsonencode({
@@ -88,8 +106,8 @@ resource "aws_iam_role" "lambda_kinesis_role" {
 }
 
 resource "aws_iam_role_policy" "lambda_scoped_access" {
-  name        = "blitz-lambda-scoped-access"
-  role        = aws_iam_role.lambda_kinesis_role.id
+  name = "blitz-lambda-scoped-access"
+  role = aws_iam_role.lambda_kinesis_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -145,6 +163,11 @@ resource "aws_iam_role_policy" "lambda_scoped_access" {
       }
     ]
   })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_vpc_access" {
+  role       = aws_iam_role.lambda_kinesis_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
 data "archive_file" "delta_processor_dummy_zip" {
@@ -210,27 +233,35 @@ resource "aws_lambda_function" "delta_processor" {
 
   layers = [aws_lambda_layer_version.delta_processor_dependencies.arn]
 
+  vpc_config {
+    subnet_ids         = var.lambda_vpc_subnet_ids
+    security_group_ids = var.lambda_vpc_security_group_ids
+  }
+
   # Package current lambda source into a deployment zip during terraform apply.
   filename         = data.archive_file.delta_processor_dummy_zip.output_path
   source_code_hash = data.archive_file.delta_processor_dummy_zip.output_base64sha256
 
   environment {
     variables = {
-      REDIS_URL             = var.redis_url
-      EDGE_WEBHOOK_URL      = var.edge_webhook_url
-      WEBHOOK_SECRET_NAME   = "blitz-edge-webhook-token"
+      REDIS_URL           = var.redis_url
+      EDGE_WEBHOOK_URL    = var.edge_webhook_url
+      WEBHOOK_SECRET_NAME = "blitz-edge-webhook-token"
     }
   }
 }
 
 resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
-  count              = var.deploy_delta_processor_lambda ? 1 : 0
-  event_source_arn  = aws_kinesis_stream.fantasy_sports_stream.arn
-  function_name     = aws_lambda_function.delta_processor[0].arn
-  starting_position = "LATEST"
-  batch_size        = 100
+  count                  = var.deploy_delta_processor_lambda ? 1 : 0
+  event_source_arn       = aws_kinesis_stream.fantasy_sports_stream.arn
+  function_name          = aws_lambda_function.delta_processor[0].arn
+  starting_position      = "LATEST"
+  batch_size             = 100
   maximum_retry_attempts = 2
 
   # Avoid eventual-consistency races where mapping creation starts before role policy is attached.
-  depends_on = [aws_iam_role_policy.lambda_scoped_access]
+  depends_on = [
+    aws_iam_role_policy.lambda_scoped_access,
+    aws_iam_role_policy_attachment.lambda_vpc_access,
+  ]
 }
