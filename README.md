@@ -776,13 +776,13 @@ terraform force-unlock <LOCK_ID>
 
 **GitHub Actions Workflow:**
 
-| Stage             | Trigger          | Action                               |
-| ----------------- | ---------------- | ------------------------------------ |
-| Quality Gate      | PR/Push          | Lint, Security Scan (tfsec, Checkov) |
-| Test Gate         | Quality pass     | Unit tests, Coverage report          |
-| Terraform Plan    | Test pass        | Plan with PR comment                 |
-| Staging Deploy    | Merge to main    | Shared infra apply + EKS deploy + Worker deploy + Lambda runtime gate |
-| Production Deploy | Merge to main    | Shared infra apply + EKS deploy + Worker deploy + Lambda runtime gate |
+| Stage             | Trigger       | Action                                                                |
+| ----------------- | ------------- | --------------------------------------------------------------------- |
+| Quality Gate      | PR/Push       | Lint, Security Scan (tfsec, Checkov)                                  |
+| Test Gate         | Quality pass  | Unit tests, Coverage report                                           |
+| Terraform Plan    | Test pass     | Plan with PR comment                                                  |
+| Staging Deploy    | Merge to main | Shared infra apply + EKS deploy + Worker deploy + Lambda runtime gate |
+| Production Deploy | Merge to main | Shared infra apply + EKS deploy + Worker deploy + Lambda runtime gate |
 
 Post-deploy runtime gates invoke `fantasy-data-delta-processor` and fail the workflow if:
 

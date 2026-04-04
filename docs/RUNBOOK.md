@@ -563,4 +563,3 @@ Current high-priority alert triggers:
 ---
 
 _Version 1.1.0 | Maintained by Platform Engineering_
-
