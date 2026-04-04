@@ -317,10 +317,9 @@ jobs:
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          WEBHOOK_SECRET_ID_STAGING: ${{ secrets.AWS_WEBHOOK_SECRET_ID_STAGING }}
         run: |
           set -euo pipefail
-          SECRET_ID="${WEBHOOK_SECRET_ID_STAGING:-blitz-edge-webhook-token}"
+          SECRET_ID="blitz-edge-webhook-token"
           case "$SECRET_ID" in
             blitz-edge-webhook-token|blitz-edge-webhook-token-staging) ;;
             *)
@@ -475,10 +474,9 @@ jobs:
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          WEBHOOK_SECRET_ID_PRODUCTION: ${{ secrets.AWS_WEBHOOK_SECRET_ID_PRODUCTION }}
         run: |
           set -euo pipefail
-          SECRET_ID="${WEBHOOK_SECRET_ID_PRODUCTION:-blitz-edge-webhook-token}"
+          SECRET_ID="blitz-edge-webhook-token"
           case "$SECRET_ID" in
             blitz-edge-webhook-token|blitz-edge-webhook-token-production) ;;
             *)
