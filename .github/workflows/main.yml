@@ -313,6 +313,15 @@ jobs:
           terraform init
           terraform apply -lock-timeout=10m -auto-approve tfplan
 
+      - name: Sync Webhook Secret (Staging)
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          WEBHOOK_SECRET=$(aws secretsmanager get-secret-value --secret-id blitz-edge-webhook-token --query SecretString --output text)
+          cd edge
+          echo "$WEBHOOK_SECRET" | npx wrangler secret put WEBHOOK_SECRET_TOKEN -e staging
+
       - name: Deploy Worker (Staging)
         uses: cloudflare/wrangler-action@v3
         with:
@@ -446,6 +455,15 @@ jobs:
           terraform init
           terraform plan -lock-timeout=10m -out=tfplan-prod
           terraform apply -lock-timeout=10m -auto-approve tfplan-prod
+
+      - name: Sync Webhook Secret (Production)
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          WEBHOOK_SECRET=$(aws secretsmanager get-secret-value --secret-id blitz-edge-webhook-token --query SecretString --output text)
+          cd edge
+          echo "$WEBHOOK_SECRET" | npx wrangler secret put WEBHOOK_SECRET_TOKEN -e production
 
       - name: Deploy Worker (Production)
         uses: cloudflare/wrangler-action@v3
