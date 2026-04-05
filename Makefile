@@ -165,7 +165,7 @@ logs-scaler:
 
 logs-processor:
 	@echo "📜 Viewing delta processor logs..."
-	aws logs tail /aws/lambda/blitz-delta-processor --follow
+	aws logs tail /aws/lambda/fantasy-data-delta-processor --follow
 
 invoke-scaler:
 	@echo "🔔 Manually invoking predictive scaler..."

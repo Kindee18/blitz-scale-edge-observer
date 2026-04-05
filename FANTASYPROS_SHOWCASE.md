@@ -88,7 +88,7 @@ graph TD
 
     subgraph Predictive Scaling
         K[Game Schedule JSON] -->|Analyze Kickoffs| L[Predictive Scaler]
-        L -->|30-min Pre-Warm| M[EKS Karpenter]
+        L -->|45-min Pre-Warm| M[EKS Karpenter]
         M -->|Provision Nodes| C
     end
 
@@ -201,8 +201,8 @@ if (currentState) {
 def lambda_handler(event, context):
     schedule = load_schedule_from_s3()
     
-    # Check for games starting within 30 minutes
-    if is_spike_imminent(schedule, lead_time_minutes=30):
+    # Check for games starting within 45 minutes
+    if is_spike_imminent(schedule, lead_time_minutes=45):
         # Pre-warm EKS cluster with Karpenter
         trigger_karpenter_scale_up()
         # Result: Nodes ready before traffic hits
@@ -413,9 +413,9 @@ nba_scoring = FantasyScoringCalculator(
 
 ## Contact & Resources
 
-- **Architecture Repository:** [github.com/fantasypros/blitz-scale-edge-observer](https://github.com/fantasypros/blitz-scale-edge-observer)
-- **Demo Environment:** [demo.blitz-scale.fantasypros.com](https://demo.blitz-scale.fantasypros.com)
-- **Technical Lead:** [platform-team@fantasypros.com](mailto:platform-team@fantasypros.com)
+- **Architecture Repository:** [github.com/Kindee18/blitz-scale-edge-observer](https://github.com/Kindee18/blitz-scale-edge-observer)
+- **Demo Environment:** *(deploy locally via `make deploy-all && make run-demo`)*
+- **Technical Lead:** *(see repository maintainers)*
 
 ---
 

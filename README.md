@@ -57,7 +57,7 @@ graph TD
 
 ### 1. Predictive Auto-Scaling (The Pre-Warm Strategy)
 
-Instead of relying on reactive Metrics (CPU/Memory that takes 2-5 minutes to spin up nodes), we created a schedule-aware Python script. It analyzes the JSON game schedule and triggers Karpenter upscaling 30 minutes before kickoff, ensuring nodes are warm, network interfaces are attached, and images are pulled ahead of the NFL Sunday traffic spike.
+Instead of relying on reactive Metrics (CPU/Memory that takes 2-5 minutes to spin up nodes), we created a schedule-aware Python script. It analyzes the JSON game schedule and triggers Karpenter upscaling 45 minutes before kickoff, ensuring nodes are warm, network interfaces are attached, and images are pulled ahead of the NFL Sunday traffic spike.
 
 ### 2. Edge-Push Real-Time Delta Pipeline
 
@@ -82,8 +82,13 @@ blitz-scale-edge-observer/
 ├── terraform/                # Infrastructure as code modules
 │   ├── eks/                  # Kubernetes cluster and Karpenter node scaling profiles
 │   ├── kinesis/              # Data streams and Lambda ingest IAM policies
-│   ├── edge/                 # Unused (shifted to Cloudflare wrangler config)
-│   └── networking/           # Managed inside EKS submodule
+│   ├── aws_shared/           # Shared infrastructure (CloudWatch, SNS, etc.)
+│   ├── dynamodb/             # DynamoDB tables
+│   ├── edge_security.tf      # Cloudflare edge security config
+│   ├── kms.tf                # KMS key management
+│   ├── monitoring.tf         # CloudWatch alarms and dashboards
+│   ├── secrets.tf            # Secrets Manager resources
+│   └── budgets.tf            # AWS budget alerts
 ├── scaling/
 │   ├── eks_auth.py           # EKS token authentication for Lambda
 │   ├── predictive_scaling.py # Auto-scaling cron/daemon
@@ -103,17 +108,24 @@ blitz-scale-edge-observer/
 ├── monitoring/
 │   ├── cloudwatch_dashboard.json  # CloudWatch dashboard definition
 │   ├── custom_metrics.py     # Metrics helper classes
+│   ├── DLQ_README.md         # DLQ operational guide
 │   └── README.md             # Monitoring guide
 ├── scripts/
+│   ├── bootstrap.sh          # Install dependencies and verify required tools
+│   ├── preflight.sh          # Validate local auth and config prerequisites
+│   ├── preflight-ci.sh       # Validate CI prerequisites
+│   ├── setup_secrets.sh      # Helper for provisioning secrets
 │   ├── demo.sh               # One-command demo script
 │   └── inject_test_events.py # Test event injector (Python)
 ├── docs/
+│   ├── ARCHITECTURE.md       # Architecture blueprint
 │   ├── RUNBOOK.md            # Operational procedures
 │   ├── RELEASE_NOTES.md      # Release history
-│   └── FANTASYPROS_SHOWCASE.md  # Full showcase documentation
+│   └── COST_MODEL.md         # Cost model and FinOps strategy
 ├── tests/
 │   └── load/
 │       └── k6_load_test.js   # k6 load testing script
+├── FANTASYPROS_SHOWCASE.md   # Full showcase documentation
 ├── .github/
 │   └── workflows/
 │       └── main.yml          # CI/CD pipeline with approval gates
@@ -491,13 +503,13 @@ stats = {
     'receptions': 0
 }
 points = calculate_fantasy_points(stats, format='ppr')
-print(f"Fantasy Points: {points}")  # Output: 20.8
+print(f"Fantasy Points: {points}")  # Output: 27.3
 
 # Calculate delta between two stat states
 old_stats = {'passing_yards': 275, 'passing_tds': 2}
 new_stats = {'passing_yards': 320, 'passing_tds': 3}
 delta = calculate_fantasy_delta(old_stats, new_stats, format='ppr')
-print(f"Points Delta: +{delta['points_delta']}")  # Output: +4.8
+print(f"Points Delta: +{delta['points_delta']}")  # Output: +5.8
 ```
 
 ---
