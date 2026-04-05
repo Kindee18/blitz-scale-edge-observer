@@ -3,11 +3,21 @@
   "version": "1.0.0",
   "description": "Blitz-Scale Edge Observer Cloudflare Worker",
   "main": "worker.js",
+  "type": "module",
   "scripts": {
     "lint": "echo 'No lint errors' && exit 0",
-    "test": "echo 'No tests defined' && exit 0"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns=test_worker"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "jest": "^30.3.0",
     "wrangler": "^3.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/unit/test_worker.test.js"],
+    "transform": {},
+    "roots": [".."],
+    "extensionsToTreatAsEsm": [".mjs"]
   }
 }

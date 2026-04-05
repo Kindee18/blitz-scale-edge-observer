@@ -17,7 +17,7 @@ from opentelemetry import trace
 from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 # Add streaming directory to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
@@ -71,19 +71,22 @@ class IngestEvent(BaseModel):
     scoring_format: Optional[str] = "ppr"  # ppr, half_ppr, standard
     sport: Optional[str] = "nfl"
 
-    @validator("timestamp")
+    @field_validator("timestamp")
+    @classmethod
     def validate_timestamp(cls, value):
         if value < 0:
             raise ValueError("Invalid timestamp")
         return value
 
-    @validator("scoring_format")
+    @field_validator("scoring_format")
+    @classmethod
     def validate_scoring_format(cls, value):
         if value not in ["ppr", "half_ppr", "standard"]:
             return "ppr"
         return value
 
-    @validator("sport")
+    @field_validator("sport")
+    @classmethod
     def validate_sport(cls, value):
         supported = ["nfl", "nba", "mlb", "nhl"]
         if value not in supported:

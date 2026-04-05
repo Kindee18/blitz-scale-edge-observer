@@ -124,9 +124,9 @@ Play happens → Lambda calculates fantasy delta (+6.2 pts) → Edge broadcasts 
 
 | Approach | Payload Size | Latency |
 |----------|--------------|---------|
-| Traditional Full Stats | 500 KB | 2-5 seconds |
-| Delta Only | 50 bytes | <100ms |
-| **Efficiency Gain** | **10,000x smaller** | **50x faster** |
+| Traditional Full Stats | ~500 KB (full season/roster dataset) | 2-5 seconds |
+| Delta Only | ~200 bytes | <100ms |
+| **Efficiency Gain** | **~2,500x smaller per update** | **50x faster** |
 
 ### 2. Multi-League Multi-Scoring Support
 

@@ -1,39 +1,68 @@
-import { unstable_dev } from "wrangler";
-import { describe, expect, it, beforeAll, afterAll } from "@jest/globals";
+/**
+ * Worker unit tests - tests routing logic by importing and calling the worker
+ * fetch handler directly, without needing a live Wrangler/Cloudflare runtime.
+ */
 
-describe("Worker", () => {
-	let worker;
+import { describe, expect, it } from "@jest/globals";
 
-	beforeAll(async () => {
-		worker = await unstable_dev("edge/worker.js", {
-			experimental: { disableProtocolCheck: true },
-		});
-	});
+// Minimal env mock matching what worker.js expects
+function makeEnv(overrides = {}) {
+  return {
+    GAME_STATE_KV: { get: async () => null, put: async () => {} },
+    GAME_TRACKER_DO: {
+      idFromName: () => ({ toString: () => "mock-id" }),
+      get: () => ({
+        fetch: async () => new Response("ok", { status: 200 }),
+      }),
+    },
+    WEBHOOK_SECRET_TOKEN: "test-secret",
+    REQUIRE_JWT_AUTH: "false",
+    WS_ROLLOUT_PERCENT: "100",
+    JWT_ISSUER: "",
+    JWT_AUDIENCE: "",
+    ...overrides,
+  };
+}
 
-	afterAll(async () => {
-		await worker.stop();
-	});
+// Dynamically import the worker module
+const workerModule = await import("../../edge/worker.js");
+const worker = workerModule.default;
 
-	it("should respond unauthorized without token", async () => {
-		const resp = await worker.fetch("/webhook/update", {
-			method: "POST",
-			body: JSON.stringify({ events: [] }),
-		});
-		expect(resp.status).toBe(401);
-	});
+describe("Worker routing", () => {
+  it("returns 200 and correct body on root health check", async () => {
+    const req = new Request("https://example.com/");
+    const resp = await worker.fetch(req, makeEnv(), {});
+    expect(resp.status).toBe(200);
+    const text = await resp.text();
+    expect(text).toContain("Blitz-Scale Edge Hub Active");
+  });
 
-	it("should return status 200 on health check", async () => {
-		const resp = await worker.fetch("/");
-		expect(resp.status).toBe(200);
-		const text = await resp.text();
-		expect(text).toContain("Blitz-Scale Edge Hub Active");
-	});
-});
+  it("returns 200 on /health endpoint", async () => {
+    const req = new Request("https://example.com/health");
+    const resp = await worker.fetch(req, makeEnv(), {});
+    expect(resp.status).toBe(200);
+  });
 
-// Durable Object Test (Conceptual - Miniflare provides better DO testing)
-describe("GameTrackerDO", () => {
-  it("should handle broadcast requests", async () => {
-    // DO integration tests would typically use Miniflare's getDurableObject method
-    // For this prototype, we confirm the routing logic in the main worker fetch.
+  it("returns 401 on /webhook/update without token", async () => {
+    const req = new Request("https://example.com/webhook/update", {
+      method: "POST",
+      body: JSON.stringify({ events: [] }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const resp = await worker.fetch(req, makeEnv(), {});
+    expect(resp.status).toBe(401);
+  });
+
+  it("returns 401 on /webhook/update with wrong token", async () => {
+    const req = new Request("https://example.com/webhook/update", {
+      method: "POST",
+      body: JSON.stringify({ events: [] }),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Webhook-Token": "wrong-token",
+      },
+    });
+    const resp = await worker.fetch(req, makeEnv(), {});
+    expect(resp.status).toBe(401);
   });
 });

@@ -1,0 +1,17 @@
+{
+  "name": "blitz-scale-edge-observer",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test:worker": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "jest": "^30.3.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/unit/test_worker.test.js"],
+    "transform": {}
+  }
+}
