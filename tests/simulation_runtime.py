@@ -89,8 +89,13 @@ async def run_simulation():
 
     with (
         patch("streaming.delta_processor_lambda.get_redis") as mock_redis_getter,
-        patch("streaming.delta_processor_lambda.get_secret", return_value="secure-token"),
-        patch("streaming.delta_processor_lambda.EDGE_WEBHOOK_URL", "https://mock-edge.example.com/webhook"),
+        patch(
+            "streaming.delta_processor_lambda.get_secret", return_value="secure-token"
+        ),
+        patch(
+            "streaming.delta_processor_lambda.EDGE_WEBHOOK_URL",
+            "https://mock-edge.example.com/webhook",
+        ),
         patch("aiohttp.ClientSession.post") as mock_post,
     ):
         # Redis Batch Simulation
@@ -119,13 +124,15 @@ async def run_simulation():
         call = call_args[0]
         post_kwargs = call[1] if call[1] else {}
         post_args = call[0] if call[0] else []
-        posted_json = post_kwargs.get("json") or (post_args[1] if len(post_args) > 1 else None)
+        posted_json = post_kwargs.get("json") or (
+            post_args[1] if len(post_args) > 1 else None
+        )
 
         if posted_json and "events" in posted_json:
             posted_events = posted_json["events"]
             print(f"🎯 Total Deltas Emitted: {len(posted_events)}")
             for i, ev in enumerate(posted_events):
-                print(f"✅ Event {i+1}: {ev.get('delta', ev)}")
+                print(f"✅ Event {i + 1}: {ev.get('delta', ev)}")
         else:
             print(f"🎯 Webhook called {len(call_args)} time(s) — delta push confirmed")
 
