@@ -7,7 +7,7 @@
 **Key Results:**
 
 - ⚡ Sub-100ms fantasy score updates globally
-- 🔋 93% reduction in mobile battery drain (eliminating polling)
+- 🔋 74% reduction in mobile battery drain (93% fewer requests via eliminating polling)
 - 💰 93% cloud cost reduction via intelligent log filtering
 - 📈 Handles 100x traffic spikes during NFL Sunday kickoffs
 
@@ -868,13 +868,4 @@ Recommended verification flow before releases:
 3. Validate CloudWatch dashboard panels and alarm states in `monitoring/cloudwatch_dashboard.json`.
 4. Update `tests/load/TEST_RESULTS.md` and this README summary numbers only from fresh artifacts.
 
----
 
-## �📌 Releases
-
-Latest Stable Version: **v1.0.0**
-For detailed changes, see the [Release Notes](docs/RELEASE_NOTES.md).
-
-```
-
-```

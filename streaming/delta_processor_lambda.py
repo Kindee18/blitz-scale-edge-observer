@@ -523,7 +523,7 @@ async def async_main(event):
     for record in event.get("Records", []):
         try:
             parsed = _parse_kinesis_record(record)
-            validated = IngestEvent(**parsed).dict()
+            validated = IngestEvent(**parsed).model_dump()
             dedupe_key = _event_dedupe_key(validated)
             if dedupe_key in seen:
                 duplicate_count += 1

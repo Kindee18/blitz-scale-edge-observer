@@ -8,7 +8,7 @@ This document demonstrates how the **Blitz-Scale Edge Observer** architecture de
 
 **Key Results:**
 - ⚡ **Sub-100ms fantasy score updates** globally
-- 🔋 **93% reduction in mobile battery drain** (eliminating polling)
+- 🔋 **74% reduction in mobile battery drain** (93% fewer requests via eliminating polling)
 - 💰 **93% cost reduction** on cloud logging
 - 📈 **Handles 100x traffic spikes** during peak game hours
 
