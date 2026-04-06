@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import time
 import boto3
-import json
 import os
 import base64
 from delta_processor_lambda import lambda_handler

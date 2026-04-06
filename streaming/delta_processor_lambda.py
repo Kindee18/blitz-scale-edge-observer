@@ -96,9 +96,10 @@ class IngestEvent(BaseModel):
 
 
 # --- Optimized AWS Config ---
+ENDPOINT_URL = os.getenv("ENDPOINT_URL")
 aws_config = Config(retries={"max_attempts": 3, "mode": "standard"})
 dynamodb = boto3.resource(
-    "dynamodb", region_name=os.getenv("AWS_REGION", "us-east-1"), config=aws_config
+    "dynamodb", region_name=os.getenv("AWS_REGION", "us-east-1"), endpoint_url=ENDPOINT_URL, config=aws_config
 )
 table = dynamodb.Table(os.getenv("STATE_TABLE_NAME", "blitz-game-state-versions"))
 
