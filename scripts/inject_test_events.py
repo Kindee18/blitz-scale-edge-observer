@@ -8,6 +8,7 @@ issues gracefully during smoke tests.
 import argparse
 import base64
 import json
+import os
 import random
 import sys
 import time
@@ -58,13 +59,16 @@ def main() -> int:
     parser.add_argument(
         "--stream", default="blitz-data-stream", help="Kinesis stream name"
     )
+    parser.add_argument(
+        "--endpoint-url", default=os.getenv("ENDPOINT_URL"), help="Custom AWS endpoint URL (e.g., LocalStack)"
+    )
     args = parser.parse_args()
 
     print(
         f"Injecting {args.count} test event(s) into {args.stream} for game {args.game_id}..."
     )
 
-    client = boto3.client("kinesis")
+    client = boto3.client("kinesis", endpoint_url=args.endpoint_url)
     sent = 0
     try:
         for i in range(args.count):

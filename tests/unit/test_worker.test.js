@@ -3,7 +3,10 @@
  * fetch handler directly, without needing a live Wrangler/Cloudflare runtime.
  */
 
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
+
+// Enable fake timers globally for these tests
+jest.useFakeTimers();
 
 // Minimal env mock matching what worker.js expects
 function makeEnv(overrides = {}) {
@@ -27,6 +30,7 @@ function makeEnv(overrides = {}) {
 // Dynamically import the worker module
 const workerModule = await import("../../edge/worker.js");
 const worker = workerModule.default;
+const GameTrackerDO = workerModule.GameTrackerDO;
 
 describe("Worker routing", () => {
   it("returns 200 and correct body on root health check", async () => {
@@ -64,5 +68,49 @@ describe("Worker routing", () => {
     });
     const resp = await worker.fetch(req, makeEnv(), {});
     expect(resp.status).toBe(401);
+  });
+});
+
+describe("GameTrackerDO Durable Object", () => {
+  it("initializes correctly and handles health check", async () => {
+    const state = {
+      id: { toString: () => "mock-game-id" },
+      waitUntil: () => {},
+    };
+    const env = makeEnv();
+    const doInstance = new GameTrackerDO(state, env);
+
+    const req = new Request("http://do/health");
+    const resp = await doInstance.fetch(req);
+    expect(resp.status).toBe(200);
+    const data = await resp.json();
+    expect(data.status).toBe("healthy");
+    expect(data.gameId).toBe("mock-game-id");
+  });
+
+  it("handles broadcast messages", async () => {
+    const state = {
+      id: { toString: () => "mock-game-id" },
+      waitUntil: () => {},
+    };
+    const env = makeEnv();
+    const doInstance = new GameTrackerDO(state, env);
+
+    const update = {
+      game_id: "mock-game-id",
+      player_id: "P1",
+      fantasy_delta: { current_points: 10.5 },
+    };
+
+    const req = new Request("http://do/broadcast", {
+      method: "POST",
+      body: JSON.stringify(update),
+    });
+
+    const resp = await doInstance.fetch(req);
+    expect(resp.status).toBe(200);
+    const result = await resp.json();
+    expect(result.success).toBe(true);
+    expect(result.recipients).toBe(0);
   });
 });

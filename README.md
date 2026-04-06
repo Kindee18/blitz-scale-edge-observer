@@ -359,18 +359,28 @@ bash scripts/preflight-ci.sh
 - `deploy-production` checks for tooling, `AWS_ROLE_ARN`, and `CF_API_TOKEN`.
 - All jobs fail fast if `edge/wrangler.toml` still has placeholder KV namespace IDs.
 
-### 1. Quick Start (One Command)
+### 1. Quick Start (Local Sandbox - Zero Cost)
+
+Validate the entire pipeline locally without AWS or Cloudflare credentials:
 
 ```bash
-# Clone and enter directory
-cd blitz-scale-edge-observer
+# 1. Start local infrastructure (LocalStack + Redis)
+make sandbox-start
 
-# Deploy everything and run demo
-make deploy-all
-make run-demo
+# 2. Start emulated Edge worker (Terminal 2)
+cd edge && npx wrangler dev
+
+# 3. Start local Lambda poller (Terminal 3)
+python3 streaming/local_kinesis_poller.py
+
+# 4. Connect fantasy client (Terminal 4)
+python3 streaming/fantasy_client_sim.py --url ws://localhost:8787/realtime
+
+# 5. Inject test events (Terminal 5)
+python3 scripts/inject_test_events.py --endpoint-url http://localhost:4566
 ```
 
-### 2. Component-by-Component Usage
+### 2. Quick Start (Cloud Deployment)
 
 #### **A. Predictive Scaling (EKS Pre-Warming)**
 

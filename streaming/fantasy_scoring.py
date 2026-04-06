@@ -36,9 +36,7 @@ class PlayerStats:
     def from_dict(cls, stats: Dict) -> "PlayerStats":
         """Create PlayerStats from a dictionary."""
         return cls(
-            passing_yards=stats.get("passing_yards", 0) or stats.get("yards", 0)
-            if stats.get("passing_tds")
-            else 0,
+            passing_yards=stats.get("passing_yards", 0) or stats.get("yards", 0),
             passing_tds=stats.get("passing_tds", 0),
             passing_ints=stats.get("passing_ints", 0) or stats.get("ints", 0),
             rushing_yards=stats.get("rushing_yards", 0),

@@ -11,13 +11,12 @@
   "devDependencies": {
     "@jest/globals": "^30.3.0",
     "jest": "^30.3.0",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.80.0"
   },
   "jest": {
     "testEnvironment": "node",
     "testMatch": ["**/tests/unit/test_worker.test.js"],
     "transform": {},
-    "roots": [".."],
-    "extensionsToTreatAsEsm": [".mjs"]
+    "roots": [".."]
   }
 }

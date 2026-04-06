@@ -15,7 +15,7 @@ sys.modules["opentelemetry.sdk.trace"] = MagicMock()
 sys.modules["opentelemetry.sdk.trace.export"] = MagicMock()
 sys.modules["opentelemetry.instrumentation.botocore"] = MagicMock()
 
-from streaming.delta_processor_lambda import compute_deltas_batched  # noqa: E402
+from streaming.delta_processor_lambda import compute_deltas_batched, compute_deltas_stateless  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -95,3 +95,29 @@ async def test_compute_deltas_batched_no_change():
 
     deltas = await compute_deltas_batched(records, mock_redis)
     assert len(deltas) == 0
+
+
+@pytest.mark.asyncio
+async def test_compute_deltas_stateless():
+    """Test delta calculation when Redis is unavailable (degraded mode)."""
+    records = [
+        {
+            "game_id": "NFL_101",
+            "player_id": "MAHOMES_15",
+            "player_name": "Patrick Mahomes",
+            "stats": {"passing_yards": 300, "passing_tds": 3},
+            "projected_points": 25.0,
+            "scoring_format": "ppr",
+            "timestamp": 123456789,
+        }
+    ]
+
+    deltas = await compute_deltas_stateless(records)
+
+    assert len(deltas) == 1
+    delta = deltas[0]
+    assert delta["game_id"] == "NFL_101"
+    assert delta["player_id"] == "MAHOMES_15"
+    assert delta["fantasy_delta"]["current_points"] == 24.0  # 300*0.04 + 3*4
+    assert delta["is_degraded"] is True
+

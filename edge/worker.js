@@ -255,12 +255,12 @@ export class GameTrackerDO {
 		this.REPLAY_LIMIT = 250;
 
 		// Start heartbeat checker
-		this.startHeartbeatChecker();
+		this.heartbeatInterval = this.startHeartbeatChecker();
 	}
 
 	// Periodic heartbeat to detect stale connections
 	startHeartbeatChecker() {
-		setInterval(() => {
+		return setInterval(() => {
 			const now = Date.now();
 			this.sessions.forEach((sessionInfo, ws) => {
 				if (ws.readyState === 1) {
@@ -289,6 +289,12 @@ export class GameTrackerDO {
 				}
 			});
 		}, this.PING_INTERVAL);
+	}
+
+	stop() {
+		if (this.heartbeatInterval) {
+			clearInterval(this.heartbeatInterval);
+		}
 	}
 
 	// Rate limiting check

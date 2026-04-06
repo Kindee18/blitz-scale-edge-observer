@@ -33,11 +33,12 @@ DYNAMODB_LOCK_TABLE = os.getenv("DYNAMODB_LOCK_TABLE", "blitz-scaling-locks")
 LOCK_TTL_SECONDS = int(os.getenv("LOCK_TTL_SECONDS", "300"))  # 5 minutes
 LEAD_TIME_MINUTES = int(os.getenv("LEAD_TIME_MINUTES", "45"))
 DRY_RUN_MODE = os.getenv("DRY_RUN_MODE", "false").lower() == "true"
+ENDPOINT_URL = os.getenv("ENDPOINT_URL")
 
 # AWS clients with optimized config
 aws_config = Config(retries={"max_attempts": 3, "mode": "adaptive"})
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION, config=aws_config)
-cw = boto3.client("cloudwatch", region_name=AWS_REGION, config=aws_config)
+dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION, endpoint_url=ENDPOINT_URL, config=aws_config)
+cw = boto3.client("cloudwatch", region_name=AWS_REGION, endpoint_url=ENDPOINT_URL, config=aws_config)
 
 
 def emit_metric(name: str, value: float, unit: str = "Count", dimensions: list = None):
@@ -195,7 +196,7 @@ def lambda_handler(event: Dict, context) -> Dict:
     }
 
     try:
-        s3 = boto3.client("s3")
+        s3 = boto3.client("s3", endpoint_url=ENDPOINT_URL)
         try:
             response = s3.get_object(Bucket=SCHEDULE_S3_BUCKET, Key=SCHEDULE_S3_KEY)
             schedule = json.loads(response["Body"].read().decode("utf-8"))

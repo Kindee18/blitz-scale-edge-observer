@@ -94,6 +94,23 @@ validate-scaler-live:
 	@test "$${CONFIRM_LIVE}" = "yes" || (echo "Set CONFIRM_LIVE=yes to run live validation" && exit 1)
 	DRY_RUN_MODE=false python3 scaling/scheduled_scaler_lambda.py
 
+sandbox-start:
+	@echo "📦 Starting Local Sandbox..."
+	docker-compose -f docker-compose.local.yml up -d
+	bash scripts/setup_localstack.sh
+	@echo "LocalStack and Redis are running."
+
+sandbox-demo:
+	@echo "🎮 Local Demo Instructions:"
+	@echo "1. Run edge worker:        cd edge && npx wrangler dev"
+	@echo "2. Run local poller:       python3 streaming/local_kinesis_poller.py"
+	@echo "3. Run client simulator:   python3 streaming/fantasy_client_sim.py --url ws://localhost:8787/realtime"
+	@echo "4. Inject test events:     python3 scripts/inject_test_events.py --endpoint-url http://localhost:4566"
+
+sandbox-stop:
+	@echo "🛑 Stopping Local Sandbox..."
+	docker-compose -f docker-compose.local.yml down
+
 # ==========================================
 # Testing Targets
 # ==========================================

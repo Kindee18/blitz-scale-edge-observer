@@ -9,6 +9,7 @@ import time
 import urllib.request
 from typing import Dict, Optional
 
+import aiohttp
 import redis.asyncio as redis_async
 import boto3
 from aws_xray_sdk.core import patch_all, xray_recorder
@@ -121,8 +122,12 @@ _CIRCUIT_STATE = {
 
 
 def get_secret(secret_name):
+    env_token = os.getenv("WEBHOOK_SECRET_TOKEN")
+    if env_token:
+        return env_token
+
     client = boto3.client(
-        "secretsmanager", region_name=os.getenv("AWS_REGION", "us-east-1")
+        "secretsmanager", region_name=os.getenv("AWS_REGION", "us-east-1"), endpoint_url=ENDPOINT_URL
     )
     try:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
@@ -166,7 +171,7 @@ def send_operational_alert(title, details):
 
     if ALERTS_SNS_TOPIC_ARN:
         try:
-            sns = boto3.client("sns", region_name=os.getenv("AWS_REGION", "us-east-1"))
+            sns = boto3.client("sns", region_name=os.getenv("AWS_REGION", "us-east-1"), endpoint_url=ENDPOINT_URL)
             sns.publish(
                 TopicArn=ALERTS_SNS_TOPIC_ARN,
                 Subject=title[:100],
@@ -264,7 +269,7 @@ async def _push_batch(session, deltas, headers):
     return False
 
 
-async def push_to_edge(deltas):
+async def push_to_edge(session, deltas):
     """Pushes computed delta updates to the edge network with retries and circuit breaker."""
     if not deltas:
         return True
@@ -281,21 +286,18 @@ async def push_to_edge(deltas):
         publish_metric("EdgePushConfigError", 1, "Count")
         return False
 
-    import aiohttp
-
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {WEBHOOK_SECRET_TOKEN}",
     }
 
     all_success = True
-    async with aiohttp.ClientSession() as session:
-        for i in range(0, len(deltas), EDGE_PUSH_BATCH_SIZE):
-            chunk = deltas[i : i + EDGE_PUSH_BATCH_SIZE]
-            ok = await _push_batch(session, chunk, headers)
-            all_success = all_success and ok
-            if not ok:
-                send_to_dlq(chunk, "edge_push_failed")
+    for i in range(0, len(deltas), EDGE_PUSH_BATCH_SIZE):
+        chunk = deltas[i : i + EDGE_PUSH_BATCH_SIZE]
+        ok = await _push_batch(session, chunk, headers)
+        all_success = all_success and ok
+        if not ok:
+            send_to_dlq(chunk, "edge_push_failed")
 
     _record_edge_push_result(all_success)
     if all_success:
@@ -478,6 +480,7 @@ async def compute_deltas_stateless(records):
                 "stat_delta": new_stats,
                 "fantasy_delta": fantasy_delta,
                 "is_full": True,
+                "is_degraded": True,
                 "league_id": league_id,
                 "user_id": user_id,
                 "scoring_format": scoring_format,
@@ -568,22 +571,23 @@ async def async_main(event):
         total_deltas = 0
         push_failure_batches = 0
 
-        for i in range(0, len(records_to_process), PROCESSING_CHUNK_SIZE):
-            chunk = records_to_process[i : i + PROCESSING_CHUNK_SIZE]
+        async with aiohttp.ClientSession() as session:
+            for i in range(0, len(records_to_process), PROCESSING_CHUNK_SIZE):
+                chunk = records_to_process[i : i + PROCESSING_CHUNK_SIZE]
 
-            with xray_recorder.in_segment("ComputeDeltas"):
-                if degraded_mode:
-                    deltas = await compute_deltas_stateless(chunk)
-                else:
-                    deltas = await compute_deltas_batched(chunk, redis)
-                total_deltas += len(deltas)
-                publish_metric("DeltasProduced", len(deltas), "Count")
+                with xray_recorder.in_segment("ComputeDeltas"):
+                    if degraded_mode:
+                        deltas = await compute_deltas_stateless(chunk)
+                    else:
+                        deltas = await compute_deltas_batched(chunk, redis)
+                    total_deltas += len(deltas)
+                    publish_metric("DeltasProduced", len(deltas), "Count")
 
-            with xray_recorder.in_segment("PushToEdge"):
-                success = await push_to_edge(deltas)
-                if not success:
-                    push_failure_batches += 1
-                    publish_metric("EdgePushFailureBatches", 1, "Count")
+                with xray_recorder.in_segment("PushToEdge"):
+                    success = await push_to_edge(session, deltas)
+                    if not success:
+                        push_failure_batches += 1
+                        publish_metric("EdgePushFailureBatches", 1, "Count")
 
         if malformed_count > 0:
             send_operational_alert(
