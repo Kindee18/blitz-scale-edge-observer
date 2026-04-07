@@ -15,10 +15,10 @@ sys.modules["opentelemetry.sdk.trace"] = MagicMock()
 sys.modules["opentelemetry.sdk.trace.export"] = MagicMock()
 sys.modules["opentelemetry.instrumentation.botocore"] = MagicMock()
 
-from streaming.delta_processor_lambda import (
+from streaming.delta_processor_lambda import (  # noqa: E402
     compute_deltas_batched,
     compute_deltas_stateless,
-)  # noqa: E402
+)
 
 
 @pytest.mark.asyncio
