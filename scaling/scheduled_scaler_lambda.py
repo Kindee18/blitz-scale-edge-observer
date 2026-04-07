@@ -37,8 +37,12 @@ ENDPOINT_URL = os.getenv("ENDPOINT_URL")
 
 # AWS clients with optimized config
 aws_config = Config(retries={"max_attempts": 3, "mode": "adaptive"})
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION, endpoint_url=ENDPOINT_URL, config=aws_config)
-cw = boto3.client("cloudwatch", region_name=AWS_REGION, endpoint_url=ENDPOINT_URL, config=aws_config)
+dynamodb = boto3.resource(
+    "dynamodb", region_name=AWS_REGION, endpoint_url=ENDPOINT_URL, config=aws_config
+)
+cw = boto3.client(
+    "cloudwatch", region_name=AWS_REGION, endpoint_url=ENDPOINT_URL, config=aws_config
+)
 
 
 def emit_metric(name: str, value: float, unit: str = "Count", dimensions: list = None):

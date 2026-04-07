@@ -99,7 +99,10 @@ class IngestEvent(BaseModel):
 ENDPOINT_URL = os.getenv("ENDPOINT_URL")
 aws_config = Config(retries={"max_attempts": 3, "mode": "standard"})
 dynamodb = boto3.resource(
-    "dynamodb", region_name=os.getenv("AWS_REGION", "us-east-1"), endpoint_url=ENDPOINT_URL, config=aws_config
+    "dynamodb",
+    region_name=os.getenv("AWS_REGION", "us-east-1"),
+    endpoint_url=ENDPOINT_URL,
+    config=aws_config,
 )
 table = dynamodb.Table(os.getenv("STATE_TABLE_NAME", "blitz-game-state-versions"))
 
@@ -128,7 +131,9 @@ def get_secret(secret_name):
         return env_token
 
     client = boto3.client(
-        "secretsmanager", region_name=os.getenv("AWS_REGION", "us-east-1"), endpoint_url=ENDPOINT_URL
+        "secretsmanager",
+        region_name=os.getenv("AWS_REGION", "us-east-1"),
+        endpoint_url=ENDPOINT_URL,
     )
     try:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
@@ -172,7 +177,11 @@ def send_operational_alert(title, details):
 
     if ALERTS_SNS_TOPIC_ARN:
         try:
-            sns = boto3.client("sns", region_name=os.getenv("AWS_REGION", "us-east-1"), endpoint_url=ENDPOINT_URL)
+            sns = boto3.client(
+                "sns",
+                region_name=os.getenv("AWS_REGION", "us-east-1"),
+                endpoint_url=ENDPOINT_URL,
+            )
             sns.publish(
                 TopicArn=ALERTS_SNS_TOPIC_ARN,
                 Subject=title[:100],

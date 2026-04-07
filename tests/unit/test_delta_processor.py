@@ -15,7 +15,10 @@ sys.modules["opentelemetry.sdk.trace"] = MagicMock()
 sys.modules["opentelemetry.sdk.trace.export"] = MagicMock()
 sys.modules["opentelemetry.instrumentation.botocore"] = MagicMock()
 
-from streaming.delta_processor_lambda import compute_deltas_batched, compute_deltas_stateless  # noqa: E402
+from streaming.delta_processor_lambda import (
+    compute_deltas_batched,
+    compute_deltas_stateless,
+)  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -120,4 +123,3 @@ async def test_compute_deltas_stateless():
     assert delta["player_id"] == "MAHOMES_15"
     assert delta["fantasy_delta"]["current_points"] == 24.0  # 300*0.04 + 3*4
     assert delta["is_degraded"] is True
-

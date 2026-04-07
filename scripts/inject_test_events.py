@@ -60,7 +60,9 @@ def main() -> int:
         "--stream", default="blitz-data-stream", help="Kinesis stream name"
     )
     parser.add_argument(
-        "--endpoint-url", default=os.getenv("ENDPOINT_URL"), help="Custom AWS endpoint URL (e.g., LocalStack)"
+        "--endpoint-url",
+        default=os.getenv("ENDPOINT_URL"),
+        help="Custom AWS endpoint URL (e.g., LocalStack)",
     )
     args = parser.parse_args()
 
