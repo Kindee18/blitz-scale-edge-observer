@@ -1,4 +1,4 @@
-redis>=5.0.0
+redis>=7.4.0
 pydantic
 aiohttp
 aws-xray-sdk
